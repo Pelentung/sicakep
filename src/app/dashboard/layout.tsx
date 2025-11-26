@@ -5,6 +5,7 @@ import {
   SidebarInset,
   SidebarProvider,
 } from '@/components/ui/sidebar';
+import { BillAlarmManager } from '@/components/bills/bill-alarm-manager';
 
 export default function DashboardLayout({
   children,
@@ -22,6 +23,7 @@ export default function DashboardLayout({
           <main className="flex-1 p-4 lg:p-6">{children}</main>
         </div>
       </SidebarInset>
+      <BillAlarmManager />
     </SidebarProvider>
   );
 }
