@@ -1,14 +1,9 @@
 'use client';
 
-import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  LogOut,
-  Settings,
-  User,
-} from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-
+import { LogOut, Settings, User } from 'lucide-react';
+import { getUser, type UserProfile } from '@/lib/user-data';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,8 +22,22 @@ import { BillNotification } from '../bills/bill-notification';
 
 export function Header() {
   const isMobile = useIsMobile();
-  const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
-  
+  const [user, setUser] = useState<UserProfile>(getUser());
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setUser(getUser());
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Initial sync
+    handleStorageChange();
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
       <div className="flex items-center gap-2">
@@ -42,8 +51,8 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-9 w-9">
-                {userAvatar && (
-                  <AvatarImage src={userAvatar.imageUrl} alt="User Avatar" />
+                {user.avatar && (
+                  <AvatarImage src={user.avatar} alt="User Avatar" />
                 )}
                 <AvatarFallback>
                   <User />
@@ -54,9 +63,9 @@ export function Header() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">Pengguna</p>
+                <p className="text-sm font-medium leading-none">{user.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  pengguna@example.com
+                  {user.email}
                 </p>
               </div>
             </DropdownMenuLabel>
