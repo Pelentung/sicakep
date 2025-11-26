@@ -7,6 +7,7 @@ import {
   CircleDollarSign,
   LayoutDashboard,
   PieChart,
+  Bell,
 } from 'lucide-react';
 
 import {
@@ -22,6 +23,7 @@ const links = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/transactions', label: 'Transaksi', icon: ArrowLeftRight },
   { href: '/dashboard/budgets', label: 'Anggaran', icon: CircleDollarSign },
+  { href: '/dashboard/bills', label: 'Tagihan', icon: Bell },
   { href: '/dashboard/reports', label: 'Laporan', icon: PieChart },
 ];
 
@@ -39,7 +41,7 @@ export function SidebarNav() {
             <SidebarMenuItem key={link.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === link.href}
+                isActive={pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard')}
                 tooltip={link.label}
               >
                 <Link href={link.href}>

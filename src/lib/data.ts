@@ -1,4 +1,4 @@
-import { subMonths, formatISO } from 'date-fns';
+import { subMonths, formatISO, parseISO, startOfDay } from 'date-fns';
 import type { Transaction, Budget, Bill, FinancialSummary } from './types';
 
 const now = new Date();
@@ -25,10 +25,11 @@ let mockBudgets: Budget[] = [
   { id: '6', category: 'Tagihan', amount: 500 },
 ];
 
-const mockBills: Bill[] = [
+let mockBills: Bill[] = [
   { id: '1', name: 'Tagihan Internet', amount: 50, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth(), 28)), isPaid: false },
   { id: '2', name: 'Langganan Streaming', amount: 15, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth() + 1, 5)), isPaid: false },
   { id: '3', name: 'Cicilan', amount: 250, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth() + 1, 10)), isPaid: false },
+  { id: '4', name: 'Tagihan Listrik', amount: 75, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth(), 15)), isPaid: true },
 ];
 
 export const getTransactions = (): Transaction[] => {
@@ -40,7 +41,7 @@ export const getBudgets = (): Budget[] => {
 };
 
 export const getBills = (): Bill[] => {
-  return mockBills;
+  return mockBills.sort((a,b) => parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime());
 };
 
 export const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
@@ -73,6 +74,40 @@ export const deleteBudget = (id: string) => {
     }
     return false;
 }
+
+export const addBill = (bill: Omit<Bill, 'id' | 'isPaid'>) => {
+    const newBill: Bill = { ...bill, id: crypto.randomUUID(), isPaid: false, dueDate: formatISO(startOfDay(parseISO(bill.dueDate))) };
+    mockBills.push(newBill);
+    return newBill;
+};
+
+export const updateBill = (id: string, updates: Omit<Bill, 'id' | 'isPaid'>) => {
+    const billIndex = mockBills.findIndex(b => b.id === id);
+    if (billIndex !== -1) {
+        mockBills[billIndex] = { ...mockBills[billIndex], ...updates, dueDate: formatISO(startOfDay(parseISO(updates.dueDate))) };
+        return mockBills[billIndex];
+    }
+    return null;
+};
+
+export const deleteBill = (id: string) => {
+    const billIndex = mockBills.findIndex(b => b.id === id);
+    if (billIndex !== -1) {
+        mockBills.splice(billIndex, 1);
+        return true;
+    }
+    return false;
+};
+
+export const toggleBillPaidStatus = (id: string) => {
+    const billIndex = mockBills.findIndex(b => b.id === id);
+    if (billIndex !== -1) {
+        mockBills[billIndex].isPaid = !mockBills[billIndex].isPaid;
+        return mockBills[billIndex];
+    }
+    return null;
+};
+
 
 export const getFinancialSummary = (transactions: Transaction[]): FinancialSummary => {
   const totalIncome = transactions
