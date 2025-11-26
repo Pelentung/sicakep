@@ -49,7 +49,7 @@ export function Header() {
         {!isMobile && (
           <div className="flex-1 overflow-hidden whitespace-nowrap">
               <h1 className="animate-marquee-slow inline-block text-xl font-bold text-foreground">
-                Selamat Datang ({user?.name || 'Pengguna'})
+                {user?.name || 'Pengguna'}
               </h1>
           </div>
         )}
