@@ -1,0 +1,9 @@
+
+[
+  { "id": "1", "category": "Makanan", "amount": 800 },
+  { "id": "2", "category": "Transportasi", "amount": 400 },
+  { "id": "3", "category": "Hiburan", "amount": 200 },
+  { "id": "4", "category": "Belanja", "amount": 500 },
+  { "id": "5", "category": "Sewa", "amount": 1500 },
+  { "id": "6", "category": "Tagihan", "amount": 500 }
+]

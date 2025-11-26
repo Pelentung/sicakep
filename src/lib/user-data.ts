@@ -1,3 +1,5 @@
+import userData from '@/database/user.json';
+
 export type UserProfile = {
   name: string;
   email: string;
@@ -6,12 +8,7 @@ export type UserProfile = {
 };
 
 // Mock user data stored in localStorage or a simple variable
-let mockUser: UserProfile = {
-  name: 'Pengguna',
-  email: 'pengguna@example.com',
-  phone: '081234567890',
-  avatar: 'https://images.unsplash.com/photo-1590086782792-42dd2350140d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjQxNDg4ODd8MA&ixlib=rb-4.1.0&q=80&w=1080',
-};
+let mockUser: UserProfile = userData;
 
 // Function to get the current user data
 export const getUser = (): UserProfile => {
@@ -20,6 +17,8 @@ export const getUser = (): UserProfile => {
     if (savedUser) {
       return JSON.parse(savedUser);
     }
+    // If no user in local storage, set it from the initial file
+    localStorage.setItem('userProfile', JSON.stringify(mockUser));
   }
   return mockUser;
 };

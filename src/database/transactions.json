@@ -1,0 +1,13 @@
+
+[
+  { "id": "1", "type": "income", "amount": 5000, "category": "Gaji", "date": "2024-06-19T08:58:39.123Z", "description": "Gaji Bulanan" },
+  { "id": "2", "type": "expense", "amount": 75, "category": "Makanan", "date": "2024-07-02T08:58:39.123Z", "description": "Makan siang" },
+  { "id": "3", "type": "expense", "amount": 200, "category": "Transportasi", "date": "2024-07-03T08:58:39.123Z_date_string_2", "description": "Bensin" },
+  { "id": "4", "type": "expense", "amount": 1500, "category": "Sewa", "date": "2024-07-05T08:58:39.123Z", "description": "Sewa apartemen" },
+  { "id": "5", "type": "income", "amount": 300, "category": "Freelance", "date": "2024-07-10T08:58:39.123Z", "description": "Proyek desain" },
+  { "id": "6", "type": "expense", "amount": 50, "category": "Hiburan", "date": "2024-07-12T08:58:39.123Z", "description": "Tiket bioskop" },
+  { "id": "7", "type": "expense", "amount": 100, "category": "Belanja", "date": "2024-07-15T08:58:39.123Z", "description": "Baju baru" },
+  { "id": "8", "type": "expense", "amount": 80, "category": "Kesehatan", "date": "2024-07-18T08:58:39.123Z", "description": "Obat" },
+  { "id": "9", "type": "expense", "amount": 120, "category": "Makanan", "date": "2024-07-20T08:58:39.123Z", "description": "Makan malam" },
+  { "id": "10", "type": "expense", "amount": 300, "category": "Tagihan", "date": "2024-07-25T08:58:39.123Z", "description": "Tagihan listrik" }
+]

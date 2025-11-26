@@ -23,8 +23,10 @@ import { BillNotification } from '../bills/bill-notification';
 export function Header() {
   const isMobile = useIsMobile();
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const handleStorageChange = () => {
       setUser(getUser());
     };
@@ -48,9 +50,13 @@ export function Header() {
       <div className="flex w-full items-center justify-end gap-4">
         {!isMobile && (
           <div className="flex-1 overflow-hidden whitespace-nowrap">
+            {isClient ? (
               <h1 className="animate-marquee-slow inline-block text-xl font-bold text-foreground">
-                {user?.name || 'Pengguna'}
+                {user?.name || ''}
               </h1>
+            ) : (
+               <div className="h-6 w-1/4 rounded-md bg-muted animate-pulse" />
+            )}
           </div>
         )}
         <BillNotification />

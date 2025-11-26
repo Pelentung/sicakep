@@ -1,36 +1,40 @@
-import { subMonths, formatISO, parseISO, startOfDay } from 'date-fns';
+import { formatISO, parseISO } from 'date-fns';
 import type { Transaction, Budget, Bill, FinancialSummary } from './types';
 
+import transactionsData from '@/database/transactions.json';
+import budgetsData from '@/database/budgets.json';
+import billsData from '@/database/bills.json';
+
+// Function to generate dynamic dates for transactions and bills
 const now = new Date();
+const getDynamicDate = (day: number, monthOffset = 0, hour = 0, minute = 0) => {
+  const date = new Date(now.getFullYear(), now.getMonth() + monthOffset, day, hour, minute);
+  return formatISO(date);
+};
 
-let mockTransactions: Transaction[] = [
-  { id: '1', type: 'income', amount: 5000, category: 'Gaji', date: formatISO(subMonths(now, 1)), description: 'Gaji Bulanan' },
-  { id: '2', type: 'expense', amount: 75, category: 'Makanan', date: formatISO(new Date(now.setDate(2))), description: 'Makan siang' },
-  { id: '3', type: 'expense', amount: 200, category: 'Transportasi', date: formatISO(new Date(new Date().setDate(3))), description: 'Bensin' },
-  { id: '4', type: 'expense', amount: 1500, category: 'Sewa', date: formatISO(new Date(new Date().setDate(5))), description: 'Sewa apartemen' },
-  { id: '5', type: 'income', amount: 300, category: 'Freelance', date: formatISO(new Date(new Date().setDate(10))), description: 'Proyek desain' },
-  { id: '6', type: 'expense', amount: 50, category: 'Hiburan', date: formatISO(new Date(new Date().setDate(12))), description: 'Tiket bioskop' },
-  { id: '7', type: 'expense', amount: 100, category: 'Belanja', date: formatISO(new Date(new Date().setDate(15))), description: 'Baju baru' },
-  { id: '8', type: 'expense', amount: 80, category: 'Kesehatan', date: formatISO(new Date(new Date().setDate(18))), description: 'Obat' },
-  { id: '9', type: 'expense', amount: 120, category: 'Makanan', date: formatISO(new Date(new Date().setDate(20))), description: 'Makan malam' },
-  { id: '10', type: 'expense', amount: 300, category: 'Tagihan', date: formatISO(new Date(new Date().setDate(25))), description: 'Tagihan listrik' },
-];
+// We use structuredClone to avoid modifying the original imported JSON data.
+// This simulates a fresh data fetch on each call.
+let mockTransactions: Transaction[] = structuredClone(transactionsData).map((t, i) => {
+    // Make dates dynamic relative to current month
+    const day = (i * 3) + 1;
+    if (i === 0) { // First transaction in previous month
+        return { ...t, date: getDynamicDate(15, -1) };
+    }
+    return { ...t, date: getDynamicDate(day > 28 ? 28 : day) };
+});
 
-let mockBudgets: Budget[] = [
-  { id: '1', category: 'Makanan', amount: 800 },
-  { id: '2', category: 'Transportasi', amount: 400 },
-  { id: '3', category: 'Hiburan', amount: 200 },
-  { id: '4', category: 'Belanja', amount: 500 },
-  { id: '5', category: 'Sewa', amount: 1500 },
-  { id: '6', category: 'Tagihan', amount: 500 },
-];
+let mockBudgets: Budget[] = structuredClone(budgetsData);
 
-let mockBills: Bill[] = [
-  { id: '1', name: 'Tagihan Internet', amount: 50, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth(), 28)), dueTime: '10:00', isPaid: false },
-  { id: '2', name: 'Langganan Streaming', amount: 15, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth() + 1, 5)), dueTime: '12:00', isPaid: false },
-  { id: '3', name: 'Cicilan', amount: 250, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth() + 1, 10)), dueTime: '09:00', isPaid: false },
-  { id: '4', name: 'Tagihan Listrik', amount: 75, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth(), 15)), dueTime: '18:00', isPaid: true },
-];
+let mockBills: Bill[] = structuredClone(billsData).map((bill, i) => {
+    switch(i) {
+        case 0: return { ...bill, dueDate: getDynamicDate(28, 0, 10, 0) };
+        case 1: return { ...bill, dueDate: getDynamicDate(5, 1, 12, 0) };
+        case 2: return { ...bill, dueDate: getDynamicDate(10, 1, 9, 0) };
+        case 3: return { ...bill, dueDate: getDynamicDate(15, 0, 18, 0) };
+        default: return bill;
+    }
+});
+
 
 export const getTransactions = (): Transaction[] => {
   return mockTransactions;
