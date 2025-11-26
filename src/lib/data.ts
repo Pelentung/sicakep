@@ -3,20 +3,20 @@ import type { Transaction, Budget, Bill, FinancialSummary } from './types';
 
 const now = new Date();
 
-const mockTransactions: Transaction[] = [
+let mockTransactions: Transaction[] = [
   { id: '1', type: 'income', amount: 5000, category: 'Gaji', date: formatISO(subMonths(now, 1)), description: 'Gaji Bulanan' },
   { id: '2', type: 'expense', amount: 75, category: 'Makanan', date: formatISO(new Date(now.setDate(2))), description: 'Makan siang' },
-  { id: '3', type: 'expense', amount: 200, category: 'Transportasi', date: formatISO(new Date(now.setDate(3))), description: 'Bensin' },
-  { id: '4', type: 'expense', amount: 1500, category: 'Sewa', date: formatISO(new Date(now.setDate(5))), description: 'Sewa apartemen' },
-  { id: '5', type: 'income', amount: 300, category: 'Freelance', date: formatISO(new Date(now.setDate(10))), description: 'Proyek desain' },
-  { id: '6', type: 'expense', amount: 50, category: 'Hiburan', date: formatISO(new Date(now.setDate(12))), description: 'Tiket bioskop' },
-  { id: '7', type: 'expense', amount: 100, category: 'Belanja', date: formatISO(new Date(now.setDate(15))), description: 'Baju baru' },
-  { id: '8', type: 'expense', amount: 80, category: 'Kesehatan', date: formatISO(new Date(now.setDate(18))), description: 'Obat' },
-  { id: '9', type: 'expense', amount: 120, category: 'Makanan', date: formatISO(new Date(now.setDate(20))), description: 'Makan malam' },
-  { id: '10', type: 'expense', amount: 300, category: 'Tagihan', date: formatISO(new Date(now.setDate(25))), description: 'Tagihan listrik' },
+  { id: '3', type: 'expense', amount: 200, category: 'Transportasi', date: formatISO(new Date(new Date().setDate(3))), description: 'Bensin' },
+  { id: '4', type: 'expense', amount: 1500, category: 'Sewa', date: formatISO(new Date(new Date().setDate(5))), description: 'Sewa apartemen' },
+  { id: '5', type: 'income', amount: 300, category: 'Freelance', date: formatISO(new Date(new Date().setDate(10))), description: 'Proyek desain' },
+  { id: '6', type: 'expense', amount: 50, category: 'Hiburan', date: formatISO(new Date(new Date().setDate(12))), description: 'Tiket bioskop' },
+  { id: '7', type: 'expense', amount: 100, category: 'Belanja', date: formatISO(new Date(new Date().setDate(15))), description: 'Baju baru' },
+  { id: '8', type: 'expense', amount: 80, category: 'Kesehatan', date: formatISO(new Date(new Date().setDate(18))), description: 'Obat' },
+  { id: '9', type: 'expense', amount: 120, category: 'Makanan', date: formatISO(new Date(new Date().setDate(20))), description: 'Makan malam' },
+  { id: '10', type: 'expense', amount: 300, category: 'Tagihan', date: formatISO(new Date(new Date().setDate(25))), description: 'Tagihan listrik' },
 ];
 
-const mockBudgets: Budget[] = [
+let mockBudgets: Budget[] = [
   { id: '1', category: 'Makanan', amount: 800 },
   { id: '2', category: 'Transportasi', amount: 400 },
   { id: '3', category: 'Hiburan', amount: 200 },
@@ -42,6 +42,37 @@ export const getBudgets = (): Budget[] => {
 export const getBills = (): Bill[] => {
   return mockBills;
 };
+
+export const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
+  const newTransaction = { ...transaction, id: crypto.randomUUID() };
+  mockTransactions.push(newTransaction);
+  return newTransaction;
+}
+
+export const addBudget = (budget: Omit<Budget, 'id'>) => {
+  const newBudget = { ...budget, id: crypto.randomUUID() };
+  mockBudgets.push(newBudget);
+  mockBudgets.sort((a,b) => a.category.localeCompare(b.category));
+  return newBudget;
+}
+
+export const updateBudget = (id: string, newAmount: number) => {
+    const budgetIndex = mockBudgets.findIndex(b => b.id === id);
+    if (budgetIndex !== -1) {
+        mockBudgets[budgetIndex].amount = newAmount;
+        return mockBudgets[budgetIndex];
+    }
+    return null;
+}
+
+export const deleteBudget = (id: string) => {
+    const budgetIndex = mockBudgets.findIndex(b => b.id === id);
+    if (budgetIndex !== -1) {
+        mockBudgets.splice(budgetIndex, 1);
+        return true;
+    }
+    return false;
+}
 
 export const getFinancialSummary = (transactions: Transaction[]): FinancialSummary => {
   const totalIncome = transactions

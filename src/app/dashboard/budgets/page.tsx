@@ -1,9 +1,16 @@
-import { getBudgets, getTransactions } from "@/lib/data";
+'use client'
+
+import { useState } from "react";
+import { getBudgets, getTransactions, addBudget, updateBudget, deleteBudget } from "@/lib/data";
 import { BudgetCard } from "@/components/budgets/budget-card";
+import { AddBudgetDialog } from "@/components/budgets/add-budget-dialog";
+import { PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { Budget } from "@/lib/types";
 
 export default function BudgetsPage() {
-    const budgets = getBudgets();
-    const transactions = getTransactions();
+    const [budgets, setBudgets] = useState(getBudgets());
+    const [transactions, setTransactions] = useState(getTransactions());
 
     const spendingByCategory = transactions
         .filter(t => t.type === 'expense')
@@ -15,21 +22,36 @@ export default function BudgetsPage() {
             return acc;
         }, {} as Record<string, number>);
 
+    const handleBudgetUpdated = () => {
+        setBudgets([...getBudgets()]);
+    }
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl md:text-3xl font-bold text-foreground">Anggaran Bulanan</h1>
+                <AddBudgetDialog onBudgetAdded={handleBudgetUpdated}>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Tambah Anggaran
+                    </Button>
+                </AddBudgetDialog>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {budgets.map(budget => (
                     <BudgetCard 
                         key={budget.id}
-                        category={budget.category}
-                        budgeted={budget.amount}
+                        budget={budget}
                         spent={spendingByCategory[budget.category] || 0}
+                        onBudgetUpdated={handleBudgetUpdated}
                     />
                 ))}
             </div>
+            {budgets.length === 0 && (
+                <div className="text-center p-8 text-muted-foreground col-span-full">
+                    Belum ada anggaran yang dibuat.
+                </div>
+            )}
         </div>
     );
 }

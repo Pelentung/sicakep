@@ -1,31 +1,38 @@
 import {
     Card,
     CardContent,
+    CardDescription,
     CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
+import type { Budget } from "@/lib/types"
+import { EditBudgetDialog } from "./edit-budget-dialog"
 
 function formatCurrency(amount: number) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
 }
 
 interface BudgetCardProps {
-    category: string;
-    budgeted: number;
+    budget: Budget;
     spent: number;
+    onBudgetUpdated: () => void;
 }
 
-export function BudgetCard({ category, budgeted, spent }: BudgetCardProps) {
-    const progress = budgeted > 0 ? (spent / budgeted) * 100 : 0;
-    const remaining = budgeted - spent;
+export function BudgetCard({ budget, spent, onBudgetUpdated }: BudgetCardProps) {
+    const progress = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
+    const remaining = budget.amount - spent;
 
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>{category}</CardTitle>
+            <CardHeader className="flex-row items-start justify-between">
+                <div>
+                    <CardTitle>{budget.category}</CardTitle>
+                    <CardDescription>Anggaran: {formatCurrency(budget.amount)}</CardDescription>
+                </div>
+                <EditBudgetDialog budget={budget} onBudgetUpdated={onBudgetUpdated} />
             </CardHeader>
             <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -33,9 +40,6 @@ export function BudgetCard({ category, budgeted, spent }: BudgetCardProps) {
                     <span>{formatCurrency(spent)}</span>
                 </div>
                 <Progress value={progress} />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Anggaran: {formatCurrency(budgeted)}</span>
-                </div>
             </CardContent>
             <CardFooter>
                 <p className={cn(
