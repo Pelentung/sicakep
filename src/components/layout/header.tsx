@@ -46,6 +46,13 @@ export function Header() {
       </div>
 
       <div className="flex w-full items-center justify-end gap-4">
+        {!isMobile && (
+          <div className="flex-1 overflow-hidden whitespace-nowrap">
+            <h1 className="animate-marquee-slow inline-block text-xl font-bold uppercase text-foreground">
+              Selamat Datang, {user?.name || 'Pengguna'}!
+            </h1>
+          </div>
+        )}
         <BillNotification />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
