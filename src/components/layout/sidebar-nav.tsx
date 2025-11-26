@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   PieChart,
   Bell,
+  User,
 } from 'lucide-react';
 
 import {
@@ -25,6 +26,7 @@ const links = [
   { href: '/dashboard/budgets', label: 'Anggaran', icon: CircleDollarSign },
   { href: '/dashboard/bills', label: 'Tagihan', icon: Bell },
   { href: '/dashboard/reports', label: 'Laporan', icon: PieChart },
+  { href: '/dashboard/profile', label: 'Profil', icon: User },
 ];
 
 export function SidebarNav() {

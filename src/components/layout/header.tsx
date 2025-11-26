@@ -63,7 +63,7 @@ export function Header() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link href="#">
+                <Link href="/dashboard/profile">
                   <User className="mr-2 h-4 w-4" />
                   <span>Profil</span>
                 </Link>
