@@ -48,11 +48,9 @@ export function Header() {
       <div className="flex w-full items-center justify-end gap-4">
         {!isMobile && (
           <div className="flex-1 overflow-hidden whitespace-nowrap">
-            {user && (
               <h1 className="animate-marquee-slow inline-block text-xl font-bold text-foreground">
                 Selamat Datang, {user?.name || 'Pengguna'}!
               </h1>
-            )}
           </div>
         )}
         <BillNotification />
