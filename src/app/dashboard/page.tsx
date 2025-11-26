@@ -32,11 +32,17 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            Selamat Datang, <span className="uppercase">{user?.name || 'Pengguna'}</span>!
-          </h1>
-          <p className="text-muted-foreground">Ini adalah ringkasan keuangan Anda.</p>
+        <div className="relative flex overflow-x-hidden">
+          <div className="animate-marquee whitespace-nowrap">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+              Selamat Datang, <span className="uppercase">{user?.name || 'Pengguna'}</span>!
+            </h1>
+          </div>
+           <div className="absolute top-0 animate-marquee2 whitespace-nowrap">
+             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+              Selamat Datang, <span className="uppercase">{user?.name || 'Pengguna'}</span>!
+            </h1>
+          </div>
         </div>
         <MonthPicker date={currentMonth} onDateChange={setCurrentMonth} />
       </div>
