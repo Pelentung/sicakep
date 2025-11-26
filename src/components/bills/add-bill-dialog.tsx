@@ -27,10 +27,11 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('09:00');
   const { toast } = useToast();
 
   const handleSubmit = () => {
-    if (!name || !amount || !dueDate) {
+    if (!name || !amount || !dueDate || !dueTime) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -39,7 +40,7 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
       return;
     }
     
-    addBill({ name, amount: Number(amount), dueDate });
+    addBill({ name, amount: Number(amount), dueDate, dueTime });
 
     toast({
       title: 'Sukses',
@@ -50,6 +51,7 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
     setName('');
     setAmount('');
     setDueDate('');
+    setDueTime('09:00');
   };
 
   return (
@@ -90,7 +92,7 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="dueDate" className="text-right">
-              Tgl. Jatuh Tempo
+              Tgl. Tempo
             </Label>
             <Input
               id="dueDate"
@@ -98,6 +100,18 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
               className="col-span-3"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="dueTime" className="text-right">
+              Jam Tempo
+            </Label>
+            <Input
+              id="dueTime"
+              type="time"
+              className="col-span-3"
+              value={dueTime}
+              onChange={(e) => setDueTime(e.target.value)}
             />
           </div>
         </div>

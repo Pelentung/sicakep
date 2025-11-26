@@ -116,7 +116,7 @@ function BillSection({
                     )}
                   >
                     Jatuh tempo:{' '}
-                    {format(parseISO(bill.dueDate), 'd MMMM yyyy', {
+                    {format(parseISO(bill.dueDate), 'd MMMM yyyy, HH:mm', {
                       locale: id,
                     })}
                   </p>

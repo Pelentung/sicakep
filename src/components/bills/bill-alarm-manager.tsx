@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { getBills, toggleBillPaidStatus } from '@/lib/data';
 import type { Bill } from '@/lib/types';
-import { isToday, parseISO, format } from 'date-fns';
+import { isToday, isPast, parseISO, format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import {
   AlertDialog,
@@ -37,8 +37,12 @@ export function BillAlarmManager() {
     const checkDueBills = () => {
       try {
         const allBills = getBills();
+        const now = new Date();
         const todayDueBills = allBills.filter(
-          (bill) => !bill.isPaid && isToday(parseISO(bill.dueDate))
+          (bill) => {
+            const dueDate = parseISO(bill.dueDate);
+            return !bill.isPaid && isPast(dueDate) && dueDate > now;
+          }
         );
         if (todayDueBills.length > 0) {
           setDueBills(todayDueBills);
@@ -48,25 +52,36 @@ export function BillAlarmManager() {
         console.error('Failed to check due bills:', error);
       }
     };
-    checkDueBills();
     
-    // Check every hour
-    const interval = setInterval(checkDueBills, 1000 * 60 * 60);
+    // Check every minute
+    const interval = setInterval(checkDueBills, 1000 * 60);
+
+    // Initial check
+    checkDueBills();
 
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    if (dueBills.length > 0) {
-      playAlarm();
+    if (dueBills.length > 0 && currentBillIndex < dueBills.length) {
+      const bill = dueBills[currentBillIndex];
+      const dueDate = parseISO(bill.dueDate);
+      const now = new Date();
+      
+      if (isPast(dueDate) && dueDate > now) {
+         const timeout = setTimeout(() => {
+            playAlarm();
+        }, dueDate.getTime() - now.getTime());
+
+        return () => clearTimeout(timeout);
+      }
     }
-  }, [dueBills]);
+  }, [dueBills, currentBillIndex]);
 
   const playAlarm = () => {
     if (audioRef.current) {
       audioRef.current.play().catch((error) => {
         console.error('Audio play failed:', error);
-        // Autoplay might be blocked. We can show a toast to ask user to interact.
         toast({
           title: 'Gagal membunyikan alarm',
           description: 'Interaksi pengguna diperlukan untuk memutar suara.',
@@ -87,9 +102,9 @@ export function BillAlarmManager() {
     stopAlarm();
     if (currentBillIndex < dueBills.length - 1) {
       setCurrentBillIndex(currentBillIndex + 1);
-      playAlarm();
     } else {
       setDueBills([]);
+      setCurrentBillIndex(0);
     }
   };
   
@@ -115,10 +130,12 @@ export function BillAlarmManager() {
     );
   }
 
+  const isAlarmActive = audioRef.current && !audioRef.current.paused;
+
   return (
     <>
       <audio ref={audioRef} src="/alarm.mp3" preload="auto" loop />
-      <AlertDialog open={!!currentBill()}>
+      <AlertDialog open={isAlarmActive}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -126,7 +143,7 @@ export function BillAlarmManager() {
               Pengingat Jatuh Tempo Tagihan!
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Tagihan berikut jatuh tempo hari ini. Segera lakukan pembayaran.
+              Tagihan berikut jatuh tempo sekarang. Segera lakukan pembayaran.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="my-4 rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
@@ -135,7 +152,7 @@ export function BillAlarmManager() {
                 <div className="text-lg font-semibold">{formatCurrency(currentBill().amount)}</div>
              </div>
              <p className="text-sm text-muted-foreground">
-                Jatuh Tempo: {format(parseISO(currentBill().dueDate), 'd MMMM yyyy', { locale: id })}
+                Jatuh Tempo: {format(parseISO(currentBill().dueDate), 'd MMMM yyyy, HH:mm', { locale: id })}
              </p>
           </div>
           <AlertDialogFooter>

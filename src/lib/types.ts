@@ -18,6 +18,7 @@ export type Bill = {
   name: string;
   amount: number;
   dueDate: string; // ISO 8601 format
+  dueTime: string; // HH:mm format
   isPaid: boolean;
 };
 

@@ -26,10 +26,10 @@ let mockBudgets: Budget[] = [
 ];
 
 let mockBills: Bill[] = [
-  { id: '1', name: 'Tagihan Internet', amount: 50, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth(), 28)), isPaid: false },
-  { id: '2', name: 'Langganan Streaming', amount: 15, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth() + 1, 5)), isPaid: false },
-  { id: '3', name: 'Cicilan', amount: 250, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth() + 1, 10)), isPaid: false },
-  { id: '4', name: 'Tagihan Listrik', amount: 75, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth(), 15)), isPaid: true },
+  { id: '1', name: 'Tagihan Internet', amount: 50, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth(), 28)), dueTime: '10:00', isPaid: false },
+  { id: '2', name: 'Langganan Streaming', amount: 15, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth() + 1, 5)), dueTime: '12:00', isPaid: false },
+  { id: '3', name: 'Cicilan', amount: 250, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth() + 1, 10)), dueTime: '09:00', isPaid: false },
+  { id: '4', name: 'Tagihan Listrik', amount: 75, dueDate: formatISO(new Date(now.getFullYear(), now.getMonth(), 15)), dueTime: '18:00', isPaid: true },
 ];
 
 export const getTransactions = (): Transaction[] => {
@@ -76,7 +76,11 @@ export const deleteBudget = (id: string) => {
 }
 
 export const addBill = (bill: Omit<Bill, 'id' | 'isPaid'>) => {
-    const newBill: Bill = { ...bill, id: crypto.randomUUID(), isPaid: false, dueDate: formatISO(startOfDay(parseISO(bill.dueDate))) };
+    const [year, month, day] = bill.dueDate.split('-').map(Number);
+    const [hours, minutes] = bill.dueTime.split(':').map(Number);
+    const dueDate = new Date(year, month - 1, day, hours, minutes);
+    
+    const newBill: Bill = { ...bill, id: crypto.randomUUID(), isPaid: false, dueDate: formatISO(dueDate) };
     mockBills.push(newBill);
     return newBill;
 };
@@ -84,7 +88,11 @@ export const addBill = (bill: Omit<Bill, 'id' | 'isPaid'>) => {
 export const updateBill = (id: string, updates: Omit<Bill, 'id' | 'isPaid'>) => {
     const billIndex = mockBills.findIndex(b => b.id === id);
     if (billIndex !== -1) {
-        mockBills[billIndex] = { ...mockBills[billIndex], ...updates, dueDate: formatISO(startOfDay(parseISO(updates.dueDate))) };
+        const [year, month, day] = updates.dueDate.split('-').map(Number);
+        const [hours, minutes] = updates.dueTime.split(':').map(Number);
+        const dueDate = new Date(year, month - 1, day, hours, minutes);
+
+        mockBills[billIndex] = { ...mockBills[billIndex], ...updates, dueDate: formatISO(dueDate) };
         return mockBills[billIndex];
     }
     return null;
