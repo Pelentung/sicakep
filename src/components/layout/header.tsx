@@ -22,16 +22,16 @@ import { BillNotification } from '../bills/bill-notification';
 
 export function Header() {
   const isMobile = useIsMobile();
-  const [user, setUser] = useState<UserProfile>(getUser());
+  const [user, setUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     const handleStorageChange = () => {
       setUser(getUser());
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    // Initial sync
+    // Initial load and listen for changes
     handleStorageChange();
+    window.addEventListener('storage', handleStorageChange);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -48,9 +48,11 @@ export function Header() {
       <div className="flex w-full items-center justify-end gap-4">
         {!isMobile && (
           <div className="flex-1 overflow-hidden whitespace-nowrap">
-            <h1 className="animate-marquee-slow inline-block text-xl font-bold uppercase text-foreground">
-              Selamat Datang, {user?.name || 'Pengguna'}!
-            </h1>
+            {user && (
+              <h1 className="animate-marquee-slow inline-block text-xl font-bold uppercase text-foreground">
+                Selamat Datang, {user?.name || 'Pengguna'}!
+              </h1>
+            )}
           </div>
         )}
         <BillNotification />
@@ -58,7 +60,7 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-9 w-9">
-                {user.avatar && (
+                {user?.avatar && (
                   <AvatarImage src={user.avatar} alt="User Avatar" />
                 )}
                 <AvatarFallback>
@@ -70,9 +72,9 @@ export function Header() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user.name}</p>
+                <p className="text-sm font-medium leading-none">{user?.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {user.email}
+                  {user?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
