@@ -2,10 +2,19 @@
 
 import { getSpendingInsights, type SpendingInsightsInput } from '@/ai/flows/spending-insights';
 import { getFinancialSummary, getSpendingByCategory, getTransactions } from '@/lib/data';
+import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
 
-export async function getAIInsightsAction(): Promise<{ success: boolean; insights?: string[]; error?: string; }> {
+export async function getAIInsightsAction(selectedMonth: Date): Promise<{ success: boolean; insights?: string[]; error?: string; }> {
   try {
-    const transactions = getTransactions();
+    const allTransactions = getTransactions();
+
+    const transactions = allTransactions.filter((t) => {
+        const transactionDate = parseISO(t.date);
+        const start = startOfMonth(selectedMonth);
+        const end = endOfMonth(selectedMonth);
+        return transactionDate >= start && transactionDate <= end;
+    });
+
     const summary = getFinancialSummary(transactions);
     const spendingByCategory = getSpendingByCategory(transactions);
 
@@ -18,7 +27,7 @@ export async function getAIInsightsAction(): Promise<{ success: boolean; insight
     };
     
     if (input.expenses.length === 0) {
-      return { success: true, insights: ["Tidak ada data pengeluaran untuk dianalisis. Mulai lacak pengeluaran Anda untuk mendapatkan wawasan!"] };
+      return { success: true, insights: ["Tidak ada data pengeluaran untuk dianalisis di bulan ini. Mulai lacak pengeluaran Anda untuk mendapatkan wawasan!"] };
     }
 
     const result = await getSpendingInsights(input);

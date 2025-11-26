@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
@@ -49,7 +49,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
         <CardContent className="p-0">
             <div className="flex items-center gap-4 p-4 border-b">
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full md:w-[180px]">
                         <SelectValue placeholder="Filter Tipe" />
                     </SelectTrigger>
                     <SelectContent>
@@ -57,7 +57,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
                     </SelectContent>
                 </Select>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-full md:w-[180px]">
                         <SelectValue placeholder="Filter Kategori" />
                     </SelectTrigger>
                     <SelectContent>
@@ -68,28 +68,42 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
             <Table>
             <TableHeader>
                 <TableRow>
-                <TableHead className="w-[100px]">Tipe</TableHead>
+                <TableHead className="w-[100px] hidden md:table-cell">Tipe</TableHead>
                 <TableHead>Deskripsi</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead>Tanggal</TableHead>
+                <TableHead className="hidden md:table-cell">Kategori</TableHead>
+                <TableHead className="hidden md:table-cell">Tanggal</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {filteredTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                     {transaction.type === 'income' ? (
                         <ArrowUpCircle className="h-5 w-5 text-green-500" />
                     ) : (
                         <ArrowDownCircle className="h-5 w-5 text-red-500" />
                     )}
                     </TableCell>
-                    <TableCell className="font-medium">{transaction.description}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                         {transaction.type === 'income' ? (
+                            <ArrowUpCircle className="h-5 w-5 text-green-500 md:hidden" />
+                        ) : (
+                            <ArrowDownCircle className="h-5 w-5 text-red-500 md:hidden" />
+                        )}
+                        <div>
+                          {transaction.description}
+                          <div className="text-sm text-muted-foreground md:hidden">
+                            {format(parseISO(transaction.date), 'd MMM yyyy', { locale: id })} - {transaction.category}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
                     <Badge variant="outline">{transaction.category}</Badge>
                     </TableCell>
-                    <TableCell>{format(parseISO(transaction.date), 'd MMMM yyyy', { locale: id })}</TableCell>
+                    <TableCell className="hidden md:table-cell">{format(parseISO(transaction.date), 'd MMMM yyyy', { locale: id })}</TableCell>
                     <TableCell className="text-right">{formatCurrency(transaction.amount)}</TableCell>
                 </TableRow>
                 ))}

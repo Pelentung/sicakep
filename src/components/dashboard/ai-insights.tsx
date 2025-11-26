@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAIInsightsAction } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
-export function AiInsights() {
+export function AiInsights({ selectedMonth }: { selectedMonth: Date }) {
   const [isPending, startTransition] = useTransition();
   const [insights, setInsights] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +16,7 @@ export function AiInsights() {
     startTransition(async () => {
       setError(null);
       setInsights(null);
-      const result = await getAIInsightsAction();
+      const result = await getAIInsightsAction(selectedMonth);
       if (result.success) {
         setInsights(result.insights);
       } else {
