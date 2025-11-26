@@ -23,6 +23,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Logo } from '../logo';
+import { BillNotification } from '../bills/bill-notification';
 
 export function Header() {
   const isMobile = useIsMobile();
@@ -36,6 +37,7 @@ export function Header() {
       </div>
 
       <div className="flex w-full items-center justify-end gap-4">
+        <BillNotification />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
