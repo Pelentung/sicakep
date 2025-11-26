@@ -3,12 +3,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { getBills, toggleBillPaidStatus } from '@/lib/data';
 import type { Bill } from '@/lib/types';
-import { isToday, isPast, parseISO, format } from 'date-fns';
+import { isPast, parseISO, format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -30,6 +28,7 @@ function formatCurrency(amount: number) {
 export function BillAlarmManager() {
   const [dueBills, setDueBills] = useState<Bill[]>([]);
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
+  const [isAlarmActive, setIsAlarmActive] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
 
@@ -38,14 +37,15 @@ export function BillAlarmManager() {
       try {
         const allBills = getBills();
         const now = new Date();
-        const todayDueBills = allBills.filter(
+        const upcomingDueBills = allBills.filter(
           (bill) => {
             const dueDate = parseISO(bill.dueDate);
-            return !bill.isPaid && isPast(dueDate) && dueDate > now;
+            // Bill is unpaid and due date is in the future
+            return !bill.isPaid && dueDate > now;
           }
         );
-        if (todayDueBills.length > 0) {
-          setDueBills(todayDueBills);
+        if (upcomingDueBills.length > 0) {
+          setDueBills(upcomingDueBills);
           setCurrentBillIndex(0);
         }
       } catch (error) {
@@ -68,8 +68,9 @@ export function BillAlarmManager() {
       const dueDate = parseISO(bill.dueDate);
       const now = new Date();
       
-      if (isPast(dueDate) && dueDate > now) {
+      if (dueDate > now) {
          const timeout = setTimeout(() => {
+            setIsAlarmActive(true);
             playAlarm();
         }, dueDate.getTime() - now.getTime());
 
@@ -82,9 +83,10 @@ export function BillAlarmManager() {
     if (audioRef.current) {
       audioRef.current.play().catch((error) => {
         console.error('Audio play failed:', error);
+        // This toast is helpful for debugging on user's side if audio fails
         toast({
           title: 'Gagal membunyikan alarm',
-          description: 'Interaksi pengguna diperlukan untuk memutar suara.',
+          description: 'Browser mungkin memblokir suara otomatis.',
           variant: 'destructive',
         });
       });
@@ -100,6 +102,8 @@ export function BillAlarmManager() {
 
   const handleClose = () => {
     stopAlarm();
+    setIsAlarmActive(false);
+    // Move to next bill or clear if all are handled
     if (currentBillIndex < dueBills.length - 1) {
       setCurrentBillIndex(currentBillIndex + 1);
     } else {
@@ -129,8 +133,6 @@ export function BillAlarmManager() {
         </>
     );
   }
-
-  const isAlarmActive = audioRef.current && !audioRef.current.paused;
 
   return (
     <>
