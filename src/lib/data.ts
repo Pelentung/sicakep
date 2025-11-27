@@ -3,7 +3,7 @@
 import { getFirestore, collection, getDocs, doc, addDoc, updateDoc, deleteDoc, query, orderBy, writeBatch, FirestoreError } from 'firebase/firestore';
 import { app } from '@/firebase/config';
 import type { Transaction, Budget, Bill, FinancialSummary } from './types';
-import { FirestorePermissionError, OperationType } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from './events';
 
 
@@ -18,7 +18,10 @@ export const getTransactions = async (userId: string): Promise<Transaction[]> =>
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.LIST, transactionCollection));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'list',
+                path: transactionCollection.path
+            }));
         } else {
             console.error("Error getting transactions:", error);
         }
@@ -32,7 +35,11 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
         await addDoc(transactionCollection, transaction);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.CREATE, transactionCollection, transaction));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'create',
+                path: transactionCollection.path,
+                requestResourceData: transaction
+            }));
         }
         // Do not rethrow, let the emitter handle it.
     }
@@ -46,7 +53,10 @@ export const getBudgets = async (userId: string): Promise<Budget[]> => {
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget));
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.LIST, budgetCollection));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'list',
+                path: budgetCollection.path
+            }));
         } else {
             console.error("Error getting budgets:", error);
         }
@@ -60,7 +70,11 @@ export const addBudget = async (userId: string, budget: Omit<Budget, 'id'>): Pro
         await addDoc(budgetCollection, budget);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-             errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.CREATE, budgetCollection, budget));
+             errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'create',
+                path: budgetCollection.path,
+                requestResourceData: budget
+             }));
         }
         // Do not rethrow
     }
@@ -73,7 +87,11 @@ export const updateBudget = async (userId: string, budgetId: string, newAmount: 
         await updateDoc(budgetRef, updateData);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.UPDATE, budgetRef, updateData));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'update',
+                path: budgetRef.path,
+                requestResourceData: updateData
+            }));
         }
         // Do not rethrow
     }
@@ -85,7 +103,10 @@ export const deleteBudget = async (userId: string, budgetId: string): Promise<vo
         await deleteDoc(budgetRef);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.DELETE, budgetRef));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'delete',
+                path: budgetRef.path
+            }));
         }
         // Do not rethrow
     }
@@ -101,7 +122,10 @@ export const getBills = async (userId: string): Promise<Bill[]> => {
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bill));
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.LIST, billCollection));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'list',
+                path: billCollection.path
+            }));
         } else {
             console.error("Error getting bills:", error);
         }
@@ -115,7 +139,11 @@ export const addBill = async (userId: string, bill: Omit<Bill, 'id'>): Promise<v
         await addDoc(billCollection, bill);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.CREATE, billCollection, bill));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'create',
+                path: billCollection.path,
+                requestResourceData: bill
+            }));
         }
         // Do not rethrow
     }
@@ -127,7 +155,11 @@ export const updateBill = async (userId: string, billId: string, updates: Partia
         await updateDoc(billRef, updates);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.UPDATE, billRef, updates));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'update',
+                path: billRef.path,
+                requestResourceData: updates
+            }));
         }
         // Do not rethrow
     }
@@ -139,7 +171,10 @@ export const deleteBill = async (userId: string, billId: string): Promise<void> 
         await deleteDoc(billRef);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.DELETE, billRef));
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'delete',
+                path: billRef.path
+            }));
         }
         // Do not rethrow
     }

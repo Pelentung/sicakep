@@ -116,6 +116,7 @@ export function useWebAuthn() {
 
   useEffect(() => {
     const checkSupport = async () => {
+      // Check for WebAuthn support
       if (
         window.PublicKeyCredential &&
         (await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())
@@ -123,13 +124,18 @@ export function useWebAuthn() {
         setIsWebAuthnSupported(true);
       }
     };
-    checkSupport();
-    
-    // Check if registration was completed before
-    const storedRegistration = localStorage.getItem('webauthn-registration-complete');
-    if (storedRegistration) {
-        setIsRegistrationComplete(true);
+
+    const checkRegistration = () => {
+        // Check if registration was completed before
+        const storedRegistration = localStorage.getItem('webauthn-registration-complete');
+        if (storedRegistration) {
+            setIsRegistrationComplete(true);
+        }
     }
+    
+    checkSupport();
+    checkRegistration();
+
   }, []);
 
   const register = async (email: string, displayName: string) => {

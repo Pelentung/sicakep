@@ -8,7 +8,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from "./config";
 import { doc, setDoc, serverTimestamp, FirestoreError } from "firebase/firestore";
-import { FirestorePermissionError, OperationType } from "./errors";
+import { FirestorePermissionError } from "./errors";
 import { errorEmitter } from "@/lib/events";
 
 export interface UserProfileData {
@@ -38,11 +38,11 @@ export const signUp = async (email: string, password: string, displayName: strin
         await setDoc(userDocRef, userProfileData);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            const customError = new FirestorePermissionError(
-                OperationType.CREATE,
-                userDocRef,
-                userProfileData
-            );
+            const customError = new FirestorePermissionError({
+                operation: 'create',
+                path: userDocRef.path,
+                requestResourceData: userProfileData,
+            });
             errorEmitter.emit('permission-error', customError);
         }
         // Do not re-throw the error, let the emitter handle it.

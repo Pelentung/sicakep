@@ -2,7 +2,7 @@
 
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, FirestoreError } from "firebase/firestore";
 import { db } from "./config";
-import { FirestorePermissionError, OperationType } from "./errors";
+import { FirestorePermissionError } from "./errors";
 import { errorEmitter } from "@/lib/events";
 
 
@@ -26,11 +26,11 @@ export const createUserDocument = async (uid: string, email: string, displayName
     await setDoc(userDocRef, userProfile);
   } catch (error) {
     if (error instanceof FirestoreError && error.code === 'permission-denied') {
-      const customError = new FirestorePermissionError(
-        OperationType.CREATE,
-        userDocRef,
-        userProfile
-      );
+      const customError = new FirestorePermissionError({
+        operation: 'create',
+        path: userDocRef.path,
+        requestResourceData: userProfile
+      });
       errorEmitter.emit('permission-error', customError);
     }
     throw error;
@@ -51,7 +51,10 @@ export const getUserProfile = async (uid: string): Promise<UserProfileData | nul
     }
   } catch (error) {
     if (error instanceof FirestoreError && error.code === 'permission-denied') {
-      errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.READ, userDocRef));
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        operation: 'get',
+        path: userDocRef.path
+      }));
     }
     console.error("Error getting user profile:", error);
     return null;
@@ -65,7 +68,11 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfileDa
       await updateDoc(userDocRef, data);
     } catch (error) {
       if (error instanceof FirestoreError && error.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.UPDATE, userDocRef, data));
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            operation: 'update',
+            path: userDocRef.path,
+            requestResourceData: data,
+        }));
       } else {
         // rethrow other errors
         throw error;

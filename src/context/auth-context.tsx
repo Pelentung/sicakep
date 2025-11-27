@@ -43,10 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
-            const customError = new FirestorePermissionError(
-                OperationType.READ,
-                userDocRef
-            );
+            const customError = new FirestorePermissionError({
+                operation: 'get',
+                path: userDocRef.path
+            });
             errorEmitter.emit('permission-error', customError);
         }
         // Rethrow to signal that profile fetching failed
@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // onAuthStateChanged will set user to null
   };
 
-  const value = { user, loading, signUp, login, logout, refreshUser, loginWithToken };
+  const value: AuthContextType = { user, loading, signUp, login, logout, refreshUser, loginWithToken };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
