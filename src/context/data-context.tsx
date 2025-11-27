@@ -107,8 +107,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleBillPaidStatus = useCallback((id: string, currentStatus: boolean) => {
+      const bill = bills.find(b => b.id === id);
+      if (!bill) return;
+
+      // Only add transaction if marking as PAID
+      if (!currentStatus) {
+        addTransaction({
+          type: 'expense',
+          amount: bill.amount,
+          category: 'Tagihan',
+          date: new Date().toISOString(),
+          description: bill.name,
+        });
+      }
+      
       setBills(prev => prev.map(b => b.id === id ? { ...b, isPaid: !currentStatus } : b));
-  }, []);
+  }, [bills, addTransaction]);
 
   const refreshBills = useCallback(() => {
     setBills(getInitialBills());
