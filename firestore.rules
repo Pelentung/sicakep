@@ -2,6 +2,20 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Users can create their own profile, and read/update it.
+    // They cannot delete their profile or see other people's profiles.
+    match /users/{userId} {
+      allow read, update: if request.auth.uid == userId;
+      allow create: if request.auth.uid != null;
+    }
+
+    // Users can fully manage their own sub-collections (transactions, budgets, bills).
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth.uid == userId;
+    }
+    
+    // Default deny all other access
     match /{document=**} {
       allow read, write: if false;
     }
