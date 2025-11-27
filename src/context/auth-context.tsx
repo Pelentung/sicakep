@@ -1,10 +1,10 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, signInWithCustomToken } from 'firebase/auth';
 import { auth, db } from '@/firebase/config';
 import { signUp as signUpApi, login as loginApi, logout as logoutApi, type UserProfileData } from '@/firebase/auth';
-import { doc, getDoc, FirestoreError } from 'firebase/firestore';
+import { doc, getDoc, FirestoreError, collection, query, where, getDocs } from 'firebase/firestore';
 import { FirestorePermissionError, OperationType } from '@/firebase/errors';
 import { errorEmitter } from '@/lib/events';
 
@@ -20,6 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  loginWithToken?: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,8 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(fullUserData);
         } catch (error) {
             console.error("Failed to fetch user profile after auth state change:", error);
-            // If profile fetch fails, maybe log out or set a minimal user state
-            setUser({ // Set a fallback user object
+            setUser({ 
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
                 displayName: firebaseUser.displayName || 'Error Loading Profile',
@@ -107,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
         await signUpApi(email, password, displayName);
-        // onAuthStateChanged will handle setting the user
     } catch(error) {
         setLoading(false);
         throw error;
@@ -118,11 +117,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
         await loginApi(email, password);
-        // onAuthStateChanged will handle setting the user
     } catch(error) {
         setLoading(false);
         throw error;
     }
+  };
+
+  // This is a mock for the prototype. In a real app, a secure server would generate this token.
+  const loginWithToken = async (email: string) => {
+      setLoading(true);
+      try {
+          // In a real app:
+          // 1. Your server verifies the WebAuthn assertion.
+          // 2. Your server finds the user's UID from the assertion.
+          // 3. Your server uses the Firebase Admin SDK to create a custom token: `admin.auth().createCustomToken(uid)`
+          // 4. Your server sends the token back to the client.
+          // 5. The client calls `signInWithCustomToken(auth, token)`.
+          
+          // MOCK: Find user UID by email in Firestore (INSECURE, for prototype only)
+          const usersRef = collection(db, 'users');
+          const q = query(usersRef, where("email", "==", email));
+          const querySnapshot = await getDocs(q);
+
+          if (querySnapshot.empty) {
+              throw new Error("User not found for WebAuthn login.");
+          }
+          const userDoc = querySnapshot.docs[0];
+          const uid = userDoc.id;
+
+          // MOCK: Create a fake token. THIS IS NOT A REAL FIREBASE TOKEN.
+          const fakeToken = `mock-token-for-uid-${uid}`;
+          console.warn("Using a mock token for WebAuthn. This is not secure and for prototype only.");
+
+          // This will fail with a real Firebase backend, but it demonstrates the flow.
+          // To make it work, you'd need a server endpoint to generate a real custom token.
+          await signInWithCustomToken(auth, fakeToken).catch(async (err) => {
+              console.error("signInWithCustomToken failed. This is expected without a real server.", err.message);
+              console.log("Simulating successful login locally.");
+              
+              // Since custom token fails without a server, manually set user state
+              const firebaseUser = { uid, email } as User;
+              const fullUserData = await fetchUserProfile(firebaseUser);
+              setUser(fullUserData);
+              setLoading(false);
+          });
+
+      } catch (error) {
+          setLoading(false);
+          throw error;
+      }
   };
 
   const logout = async () => {
@@ -131,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // onAuthStateChanged will set user to null
   };
 
-  const value = { user, loading, signUp, login, logout, refreshUser };
+  const value = { user, loading, signUp, login, logout, refreshUser, loginWithToken };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
