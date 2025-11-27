@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Merchant } from '@/lib/merchant-data';
 import { merchants } from '@/lib/merchant-data';
 import { MerchantCard } from '@/components/merchant/merchant-card';
@@ -13,6 +14,7 @@ export default function MerchantPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleMerchantClick = (merchant: Merchant) => {
     setSelectedMerchant(merchant);
@@ -37,6 +39,7 @@ export default function MerchantPage() {
           description: result.message,
         });
         handleDialogClose();
+        router.refresh(); // Refresh data di seluruh aplikasi
       } else {
         toast({
           variant: 'destructive',
