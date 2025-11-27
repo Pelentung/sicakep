@@ -106,54 +106,42 @@ export function EditBillDialog({ bill, onUpdate }: EditBillDialogProps) {
               Perbarui detail tagihan Anda di sini.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name-edit" className="text-right">
-              Nama
-            </Label>
-            <Input
-              id="name-edit"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="col-span-3"
-            />
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name-edit">Nama</Label>
+              <Input
+                id="name-edit"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="amount-edit">Jumlah</Label>
+              <CurrencyInput
+                id="amount-edit"
+                value={amount}
+                onValueChange={setAmount}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dueDate-edit">Tgl. Tempo</Label>
+              <Input
+                id="dueDate-edit"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dueTime-edit">Jam Tempo</Label>
+              <Input
+                id="dueTime-edit"
+                type="time"
+                value={dueTime}
+                onChange={(e) => setDueTime(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="amount-edit" className="text-right">
-              Jumlah
-            </Label>
-            <CurrencyInput
-              id="amount-edit"
-              value={amount}
-              onValueChange={setAmount}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="dueDate-edit" className="text-right">
-              Tgl. Tempo
-            </Label>
-            <Input
-              id="dueDate-edit"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="dueTime-edit" className="text-right">
-              Jam Tempo
-            </Label>
-            <Input
-              id="dueTime-edit"
-              type="time"
-              value={dueTime}
-              onChange={(e) => setDueTime(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-        </div>
           <DialogFooter>
             <Button onClick={handleUpdate}>Simpan Perubahan</Button>
           </DialogFooter>

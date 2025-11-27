@@ -99,16 +99,13 @@ export function EditBudgetDialog({ budget, onUpdate }: EditBudgetDialogProps) {
                             Perbarui jumlah anggaran untuk kategori ini.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="amount" className="text-right">
-                                Jumlah
-                            </Label>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="amount">Jumlah</Label>
                             <CurrencyInput
                                 id="amount"
                                 value={amount}
                                 onValueChange={setAmount}
-                                className="col-span-3"
                             />
                         </div>
                     </div>

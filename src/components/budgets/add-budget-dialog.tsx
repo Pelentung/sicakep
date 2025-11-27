@@ -65,29 +65,24 @@ export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.R
             Buat anggaran baru untuk kategori pengeluaran.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="category" className="text-right">
-                Kategori
-                </Label>
+        <div className="space-y-4 py-4">
+            <div className="space-y-2">
+                <Label htmlFor="category">Kategori</Label>
                 <Select onValueChange={setCategory} value={category}>
-                <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Pilih kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                    {expenseCategories.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                </SelectContent>
+                  <SelectTrigger id="category">
+                      <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      {expenseCategories.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                  </SelectContent>
                 </Select>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="amount" className="text-right">
-                Jumlah
-                </Label>
+            <div className="space-y-2">
+                <Label htmlFor="amount">Jumlah</Label>
                 <CurrencyInput
                     id="amount"
-                    className="col-span-3"
                     value={amount}
                     onValueChange={setAmount}
                 />

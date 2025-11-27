@@ -63,50 +63,38 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
             Buat pengingat baru untuk tagihan yang akan datang.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Nama
-            </Label>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nama</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="col-span-3"
               placeholder="Cth: Tagihan Listrik"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="amount" className="text-right">
-              Jumlah
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="amount">Jumlah</Label>
             <CurrencyInput
               id="amount"
-              className="col-span-3"
               value={amount}
               onValueChange={setAmount}
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="dueDate" className="text-right">
-              Tgl. Tempo
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="dueDate">Tgl. Tempo</Label>
             <Input
               id="dueDate"
               type="date"
-              className="col-span-3"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="dueTime" className="text-right">
-              Jam Tempo
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="dueTime">Jam Tempo</Label>
             <Input
               id="dueTime"
               type="time"
-              className="col-span-3"
               value={dueTime}
               onChange={(e) => setDueTime(e.target.value)}
             />

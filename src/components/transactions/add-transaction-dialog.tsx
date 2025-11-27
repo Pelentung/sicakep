@@ -91,12 +91,12 @@ export function AddTransactionDialog({ onTransactionAdded }: AddTransactionDialo
             Catat pemasukan atau pengeluaran baru Anda.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Tipe</Label>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Tipe</Label>
             <RadioGroup 
               value={type} 
-              className="col-span-3 flex gap-4"
+              className="flex gap-4"
               onValueChange={(value) => {
                 setType(value as 'income' | 'expense');
                 setCategory(''); // Reset category on type change
@@ -104,31 +104,26 @@ export function AddTransactionDialog({ onTransactionAdded }: AddTransactionDialo
               >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="income" id="r1" />
-                <Label htmlFor="r1">Pemasukan</Label>
+                <Label htmlFor="r1" className="font-normal">Pemasukan</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="expense" id="r2" />
-                <Label htmlFor="r2">Pengeluaran</Label>
+                <Label htmlFor="r2" className="font-normal">Pengeluaran</Label>
               </div>
             </RadioGroup>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="amount" className="text-right">
-              Jumlah
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="amount">Jumlah</Label>
             <CurrencyInput
               id="amount"
-              className="col-span-3"
               value={amount}
               onValueChange={setAmount}
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="category" className="text-right">
-              Kategori
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="category">Kategori</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="col-span-3">
+              <SelectTrigger id="category">
                 <SelectValue placeholder="Pilih kategori" />
               </SelectTrigger>
               <SelectContent>
@@ -138,17 +133,13 @@ export function AddTransactionDialog({ onTransactionAdded }: AddTransactionDialo
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="date" className="text-right">
-              Tanggal
-            </Label>
-            <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} className="col-span-3" />
+          <div className="space-y-2">
+            <Label htmlFor="date">Tanggal</Label>
+            <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">
-              Deskripsi
-            </Label>
-            <Textarea id="description" placeholder="Deskripsi singkat (opsional)" className="col-span-3" value={description} onChange={e => setDescription(e.target.value)} />
+          <div className="space-y-2">
+            <Label htmlFor="description">Deskripsi</Label>
+            <Textarea id="description" placeholder="Deskripsi singkat (opsional)" value={description} onChange={e => setDescription(e.target.value)} />
           </div>
         </div>
         <DialogFooter>
