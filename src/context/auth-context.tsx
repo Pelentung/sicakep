@@ -4,7 +4,9 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/firebase/config';
 import { signUp as signUpApi, login as loginApi, logout as logoutApi, type UserProfileData } from '@/firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, FirestoreError } from 'firebase/firestore';
+import { FirestorePermissionError, OperationType } from '@/firebase/errors';
+import { errorEmitter } from '@/lib/events';
 
 export interface UserData extends UserProfileData {
     uid: string;
@@ -28,16 +30,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = useCallback(async (firebaseUser: User): Promise<UserData> => {
     const userDocRef = doc(db, 'users', firebaseUser.uid);
-    const userDoc = await getDoc(userDocRef);
-    if (userDoc.exists()) {
-        const profileData = userDoc.data() as UserProfileData;
-        return {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            ...profileData
-        };
+    try {
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+            const profileData = userDoc.data() as UserProfileData;
+            return {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                ...profileData
+            };
+        }
+    } catch (error) {
+        if (error instanceof FirestoreError && error.code === 'permission-denied') {
+            const customError = new FirestorePermissionError(
+                OperationType.READ,
+                userDocRef
+            );
+            errorEmitter.emit('permission-error', customError);
+        }
+        // Rethrow to signal that profile fetching failed
+        throw error;
     }
-    // Fallback if firestore doc doesn't exist for some reason
+    // Fallback if firestore doc doesn't exist (e.g., after signup but before doc creation)
     return {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
@@ -50,8 +64,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const fullUserData = await fetchUserProfile(firebaseUser);
-        setUser(fullUserData);
+        try {
+            const fullUserData = await fetchUserProfile(firebaseUser);
+            setUser(fullUserData);
+        } catch (error) {
+            console.error("Failed to fetch user profile after auth state change:", error);
+            // If profile fetch fails, maybe log out or set a minimal user state
+            setUser({ // Set a fallback user object
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName || 'Error Loading Profile',
+                photoURL: firebaseUser.photoURL || '',
+                phone: ''
+            });
+        }
       } else {
         setUser(null);
       }
@@ -65,9 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentUser = auth.currentUser;
     if (currentUser) {
         setLoading(true);
-        const fullUserData = await fetchUserProfile(currentUser);
-        setUser(fullUserData);
-        setLoading(false);
+        try {
+            const fullUserData = await fetchUserProfile(currentUser);
+            setUser(fullUserData);
+        } catch (error) {
+            console.error("Failed to refresh user:", error);
+        } finally {
+            setLoading(false);
+        }
     }
   }, [fetchUserProfile]);
 
@@ -97,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setLoading(true);
     await logoutApi();
-    // onAuthStateChanged will set user to null and clear data
+    // onAuthStateChanged will set user to null
   };
 
   const value = { user, loading, signUp, login, logout, refreshUser };
