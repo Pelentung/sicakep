@@ -57,7 +57,7 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow read, update: if isOwner(userId);
-      allow create: if isSignedIn() && request.auth.uid == userId && hasValidUserDataOnCreate(userId);
+      allow create: if isSignedIn() && request.auth.uid == userId;
       allow delete: if false; // Generally, users shouldn't delete their own accounts directly.
 
       /**
@@ -65,7 +65,7 @@ service cloud.firestore {
        * @path /users/{userId}/transactions/{transactionId}
        */
       match /transactions/{transactionId} {
-        allow read, write: if isOwner(userId);
+        allow read, write, list: if isOwner(userId);
       }
 
       /**
@@ -73,7 +73,7 @@ service cloud.firestore {
        * @path /users/{userId}/budgets/{budgetId}
        */
       match /budgets/{budgetId} {
-         allow read, write: if isOwner(userId);
+         allow read, write, list: if isOwner(userId);
       }
 
       /**
@@ -81,7 +81,7 @@ service cloud.firestore {
        * @path /users/{userId}/bills/{billId}
        */
       match /bills/{billId} {
-         allow read, write: if isOwner(userId);
+         allow read, write, list: if isOwner(userId);
       }
     }
   }
