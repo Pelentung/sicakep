@@ -1,0 +1,349 @@
+{
+  "entities": {
+    "Expense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expense",
+      "type": "object",
+      "description": "Represents an expense record.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Expense entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Expense)"
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to Category. (Relationship: Category 1:N Expense)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the expense."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date of the expense.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the expense."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "categoryId",
+        "amount",
+        "date"
+      ]
+    },
+    "Income": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Income",
+      "type": "object",
+      "description": "Represents an income record.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Income entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Income)"
+        },
+        "source": {
+          "type": "string",
+          "description": "The source of the income."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the income."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date of the income.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the income."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "source",
+        "amount",
+        "date"
+      ]
+    },
+    "Budget": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Budget",
+      "type": "object",
+      "description": "Represents a budget for a specific category.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Budget entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Budget)"
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to Category. (Relationship: Category 1:N Budget)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The budgeted amount for the category."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The start date of the budget period.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The end date of the budget period.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "categoryId",
+        "amount",
+        "startDate",
+        "endDate"
+      ]
+    },
+    "BillReminder": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BillReminder",
+      "type": "object",
+      "description": "Represents a reminder for an upcoming bill payment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the BillReminder entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N BillReminder)"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the bill."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the bill."
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "The due date of the bill.",
+          "format": "date-time"
+        },
+        "isPaid": {
+          "type": "boolean",
+          "description": "Indicates whether the bill has been paid."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "description",
+        "amount",
+        "dueDate",
+        "isPaid"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a category for expenses and budgets.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Category entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Category)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the category."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the category."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles.  This path is secured such that only the user can read/write their own profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/expenses/{expenseId}",
+        "definition": {
+          "entityName": "Expense",
+          "schema": {
+            "$ref": "#/backend/entities/Expense"
+          },
+          "description": "Stores expense records for each user. Path-based ownership ensures only the user can access their own expenses.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "expenseId",
+              "description": "The unique identifier for the expense."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/incomes/{incomeId}",
+        "definition": {
+          "entityName": "Income",
+          "schema": {
+            "$ref": "#/backend/entities/Income"
+          },
+          "description": "Stores income records for each user. Path-based ownership ensures only the user can access their own income.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "incomeId",
+              "description": "The unique identifier for the income."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/budgets/{budgetId}",
+        "definition": {
+          "entityName": "Budget",
+          "schema": {
+            "$ref": "#/backend/entities/Budget"
+          },
+          "description": "Stores budget records for each user. Path-based ownership ensures only the user can access their own budgets.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "budgetId",
+              "description": "The unique identifier for the budget."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/billReminders/{billReminderId}",
+        "definition": {
+          "entityName": "BillReminder",
+          "schema": {
+            "$ref": "#/backend/entities/BillReminder"
+          },
+          "description": "Stores bill reminder records for each user. Path-based ownership ensures only the user can access their own bill reminders.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "billReminderId",
+              "description": "The unique identifier for the bill reminder."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores expense categories for each user. Path-based ownership ensures only the user can access their own categories.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "categoryId",
+              "description": "The unique identifier for the category."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to manage personal finance data for the SICAKEP application. It leverages path-based ownership for user-specific data, ensuring secure and efficient data access and management.  Each user's data (expenses, income, budgets, bill reminders, and categories) is stored under their respective user ID, thus enforcing strict ownership. This approach provides authorization independence since all data access rules are based on the authenticated user's ID and the document path, eliminating the need for complex `get()` calls in security rules. This facilitates atomic operations and simplifies debugging. The structure inherently supports the required QAPs (Rules are not Filters) by enforcing that listing operations are scoped to a user's own data.  For example, listing expenses under `/users/{userId}/expenses` will only return expenses for the authenticated user, as the rules will only allow access if `request.auth.uid == userId`."
+  }
+}
