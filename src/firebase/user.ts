@@ -26,7 +26,12 @@ export const createUserDocument = async (uid: string, email: string, displayName
     await setDoc(userDocRef, userProfile);
   } catch (error) {
     if (error instanceof FirestoreError && error.code === 'permission-denied') {
-      errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.CREATE, userDocRef, userProfile));
+      const customError = new FirestorePermissionError(
+        OperationType.CREATE,
+        userDocRef,
+        userProfile
+      );
+      errorEmitter.emit('permission-error', customError);
     }
     throw error;
   }
@@ -61,8 +66,9 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfileDa
     } catch (error) {
       if (error instanceof FirestoreError && error.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.UPDATE, userDocRef, data));
+      } else {
+        // rethrow other errors
+        throw error;
       }
-      // Do not re-throw the error here, let the emitter handle it.
-      // This will prevent the generic error from being caught by the UI.
     }
 };
