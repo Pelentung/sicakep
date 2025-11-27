@@ -2,14 +2,14 @@
 
 import { getSpendingInsights, type SpendingInsightsInput } from '@/ai/flows/spending-insights';
 import { getFinancialSummary, getSpendingByCategory } from '@/lib/data';
-import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
-import { collection, getDocs, getFirestore, query, where } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase'; // Assuming this can run on the server
+import { startOfMonth, endOfMonth } from 'date-fns';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { initializeServerSideFirebase } from '@/firebase/server-init';
 import type { Transaction } from '@/lib/types';
 
 
 // This is a simplified server-side init. In a real app, you'd share config.
-const { firestore: db } = initializeFirebase();
+const { firestore: db } = initializeServerSideFirebase();
 
 export async function getAIInsightsAction(userId: string, selectedMonth: Date): Promise<{ success: boolean; insights?: string[]; error?: string; }> {
   try {
