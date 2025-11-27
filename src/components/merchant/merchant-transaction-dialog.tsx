@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import type { Merchant } from '@/lib/merchant-data';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
+import { CurrencyInput } from '../ui/currency-input';
 
 interface MerchantTransactionDialogProps {
   isOpen: boolean;
@@ -32,11 +33,11 @@ export function MerchantTransactionDialog({
   isPending,
 }: MerchantTransactionDialogProps) {
   const [customerId, setCustomerId] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const { toast } = useToast();
 
   const handleConfirm = () => {
-    if (!customerId || !amount) {
+    if (!customerId || amount === undefined) {
       toast({
         variant: 'destructive',
         title: 'Input Tidak Lengkap',
@@ -53,7 +54,7 @@ export function MerchantTransactionDialog({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setCustomerId('');
-      setAmount('');
+      setAmount(undefined);
       onClose();
     }
   };
@@ -83,12 +84,10 @@ export function MerchantTransactionDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="amount">Jumlah</Label>
-            <Input
+            <CurrencyInput
               id="amount"
-              type="number"
-              placeholder="Rp 0"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onValueChange={setAmount}
               disabled={isPending}
             />
           </div>

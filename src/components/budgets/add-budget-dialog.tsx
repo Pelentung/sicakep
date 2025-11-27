@@ -22,6 +22,7 @@ import {
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import type { Budget } from "@/lib/types"
+import { CurrencyInput } from "../ui/currency-input"
 
 
 const expenseCategories = ["Makanan", "Transportasi", "Sewa", "Hiburan", "Belanja", "Kesehatan", "Tagihan", "Lainnya"];
@@ -29,11 +30,11 @@ const expenseCategories = ["Makanan", "Transportasi", "Sewa", "Hiburan", "Belanj
 export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.ReactNode, onBudgetAdded: (budget: Omit<Budget, 'id' | 'userId'>) => void }) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const { toast } = useToast();
 
   const handleSubmit = () => {
-    if (!category || !amount) {
+    if (!category || amount === undefined) {
         toast({
             variant: "destructive",
             title: "Error",
@@ -49,7 +50,7 @@ export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.R
     });
     setOpen(false);
     setCategory('');
-    setAmount('');
+    setAmount(undefined);
   };
 
   return (
@@ -84,13 +85,11 @@ export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.R
                 <Label htmlFor="amount" className="text-right">
                 Jumlah
                 </Label>
-                <Input 
-                    id="amount" 
-                    type="number" 
-                    placeholder="Rp 0" 
+                <CurrencyInput
+                    id="amount"
                     className="col-span-3"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onValueChange={setAmount}
                 />
             </div>
         </div>

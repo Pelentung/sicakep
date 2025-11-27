@@ -32,6 +32,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useData } from "@/context/data-context"
+import { CurrencyInput } from "../ui/currency-input"
 
 interface EditBudgetDialogProps {
     budget: Budget;
@@ -42,11 +43,11 @@ export function EditBudgetDialog({ budget, onUpdate }: EditBudgetDialogProps) {
     const { updateBudget, deleteBudget } = useData();
     const [open, setOpen] = useState(false);
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-    const [amount, setAmount] = useState(budget.amount.toString());
+    const [amount, setAmount] = useState<number | undefined>(budget.amount);
     const { toast } = useToast();
 
     const handleUpdate = () => {
-        if (!amount) {
+        if (amount === undefined) {
             toast({
                 variant: "destructive",
                 title: "Error",
@@ -103,11 +104,10 @@ export function EditBudgetDialog({ budget, onUpdate }: EditBudgetDialogProps) {
                             <Label htmlFor="amount" className="text-right">
                                 Jumlah
                             </Label>
-                            <Input
+                            <CurrencyInput
                                 id="amount"
-                                type="number"
                                 value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
+                                onValueChange={setAmount}
                                 className="col-span-3"
                             />
                         </div>

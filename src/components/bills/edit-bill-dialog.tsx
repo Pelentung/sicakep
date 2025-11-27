@@ -33,6 +33,7 @@ import {
 import type { Bill } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { useData } from '@/context/data-context';
+import { CurrencyInput } from '../ui/currency-input';
 
 interface EditBillDialogProps {
   bill: Bill;
@@ -44,13 +45,13 @@ export function EditBillDialog({ bill, onUpdate }: EditBillDialogProps) {
   const [open, setOpen] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [name, setName] = useState(bill.name);
-  const [amount, setAmount] = useState(bill.amount.toString());
+  const [amount, setAmount] = useState<number | undefined>(bill.amount);
   const [dueDate, setDueDate] = useState(format(parseISO(bill.dueDate), 'yyyy-MM-dd'));
   const [dueTime, setDueTime] = useState(bill.dueTime);
   const { toast } = useToast();
 
   const handleUpdate = () => {
-    if (!name || !amount || !dueDate || !dueTime) {
+    if (!name || amount === undefined || !dueDate || !dueTime) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -121,11 +122,10 @@ export function EditBillDialog({ bill, onUpdate }: EditBillDialogProps) {
             <Label htmlFor="amount-edit" className="text-right">
               Jumlah
             </Label>
-            <Input
+            <CurrencyInput
               id="amount-edit"
-              type="number"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onValueChange={setAmount}
               className="col-span-3"
             />
           </div>

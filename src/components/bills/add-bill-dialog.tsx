@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Bill } from '@/lib/types';
+import { CurrencyInput } from '../ui/currency-input';
 
 interface AddBillDialogProps {
   children: React.ReactNode;
@@ -24,13 +25,13 @@ interface AddBillDialogProps {
 export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('09:00');
   const { toast } = useToast();
 
   const handleSubmit = () => {
-    if (!name || !amount || !dueDate || !dueTime) {
+    if (!name || amount === undefined || !dueDate || !dueTime) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -47,7 +48,7 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
     });
     setOpen(false);
     setName('');
-    setAmount('');
+    setAmount(undefined);
     setDueDate('');
     setDueTime('09:00');
   };
@@ -79,13 +80,11 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
             <Label htmlFor="amount" className="text-right">
               Jumlah
             </Label>
-            <Input
+            <CurrencyInput
               id="amount"
-              type="number"
-              placeholder="Rp 0"
               className="col-span-3"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onValueChange={setAmount}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">

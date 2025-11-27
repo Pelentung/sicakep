@@ -25,6 +25,7 @@ import { useState } from "react"
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
 import type { Transaction } from "@/lib/types"
+import { CurrencyInput } from "../ui/currency-input"
 
 
 const incomeCategories = ["Gaji", "Freelance", "Investasi", "Lainnya"];
@@ -37,14 +38,14 @@ interface AddTransactionDialogProps {
 export function AddTransactionDialog({ onTransactionAdded }: AddTransactionDialogProps) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<'income' | 'expense'>('expense');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().substring(0, 10));
   const [description, setDescription] = useState('');
   const { toast } = useToast();
 
   const handleSubmit = () => {
-    if (!amount || !category || !date) {
+    if (amount === undefined || !category || !date) {
         toast({
             variant: "destructive",
             title: "Error",
@@ -68,7 +69,7 @@ export function AddTransactionDialog({ onTransactionAdded }: AddTransactionDialo
 
     // Reset form
     setOpen(false);
-    setAmount('');
+    setAmount(undefined);
     setCategory('');
     setDate(new Date().toISOString().substring(0, 10));
     setDescription('');
@@ -115,7 +116,12 @@ export function AddTransactionDialog({ onTransactionAdded }: AddTransactionDialo
             <Label htmlFor="amount" className="text-right">
               Jumlah
             </Label>
-            <Input id="amount" type="number" placeholder="Rp 0" className="col-span-3" value={amount} onChange={e => setAmount(e.target.value)} />
+            <CurrencyInput
+              id="amount"
+              className="col-span-3"
+              value={amount}
+              onValueChange={setAmount}
+            />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="category" className="text-right">
