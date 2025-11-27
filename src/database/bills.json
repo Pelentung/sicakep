@@ -1,7 +1,0 @@
-
-[
-  { "id": "1", "name": "Tagihan Internet", "amount": 50, "dueDate": "2024-07-28T10:00:00.000Z", "dueTime": "10:00", "isPaid": false },
-  { "id": "2", "name": "Langganan Streaming", "amount": 15, "dueDate": "2024-08-05T12:00:00.000Z", "dueTime": "12:00", "isPaid": false },
-  { "id": "3", "name": "Cicilan", "amount": 250, "dueDate": "2024-08-10T09:00:00.000Z", "dueTime": "09:00", "isPaid": false },
-  { "id": "4", "name": "Tagihan Listrik", "amount": 75, "dueDate": "2024-07-15T18:00:00.000Z", "dueTime": "18:00", "isPaid": true }
-]

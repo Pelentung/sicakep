@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -8,18 +8,36 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { getUser, updateUser, type UserProfile } from '@/lib/user-data';
-import { User } from 'lucide-react';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { User as UserIcon, LoaderCircle } from 'lucide-react';
+import { doc } from 'firebase/firestore';
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<UserProfile>(getUser());
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatar);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user: authUser, isUserLoading } = useUser();
+  const db = useFirestore();
   const { toast } = useToast();
+  
+  const userDocRef = useMemoFirebase(() => {
+    if (!db || !authUser) return null;
+    return doc(db, 'users', authUser.uid);
+  }, [db, authUser]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setUser(prev => ({ ...prev, [name]: value }));
-  };
+  const { data: user, isLoading: isProfileLoading, error } = useDoc<UserProfile>(userDocRef);
+
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setEmail(user.email || '');
+      setPhone(user.phone || '');
+      setAvatarPreview(user.avatar || null);
+    }
+  }, [user]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -32,7 +50,6 @@ export default function ProfilePage() {
       reader.onloadend = () => {
         const result = reader.result as string;
         setAvatarPreview(result);
-        setUser(prev => ({...prev, avatar: result}));
       };
       reader.readAsDataURL(file);
     }
@@ -40,12 +57,29 @@ export default function ProfilePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateUser(user);
+    if (!authUser) return;
+
+    const updatedProfile: Partial<UserProfile> = {
+        name,
+        email,
+        phone,
+        avatar: avatarPreview || '',
+    };
+
+    updateUser(db, authUser.uid, updatedProfile);
     toast({
       title: 'Profil Diperbarui',
       description: 'Informasi profil Anda telah berhasil disimpan.',
     });
   };
+
+  if (isUserLoading || isProfileLoading) {
+    return <div className="flex h-full w-full items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>;
+  }
+  
+  if (error) {
+    return <div className="text-red-500">Error: {error.message}</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -64,7 +98,7 @@ export default function ProfilePage() {
               <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
                 <AvatarImage src={avatarPreview || undefined} alt="User Avatar" />
                 <AvatarFallback>
-                    <User className="h-12 w-12" />
+                    <UserIcon className="h-12 w-12" />
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-2">
@@ -84,15 +118,15 @@ export default function ProfilePage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Nama</Label>
-                <Input id="name" name="name" value={user.name} onChange={handleInputChange} />
+                <Input id="name" name="name" value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" value={user.email} onChange={handleInputChange} />
+                <Input id="email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telepon</Label>
-                <Input id="phone" name="phone" type="tel" value={user.phone} onChange={handleInputChange} />
+                <Input id="phone" name="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
             </div>
           </CardContent>

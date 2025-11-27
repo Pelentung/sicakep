@@ -33,20 +33,22 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useUser, useFirestore } from "@/firebase"
 
 interface EditBudgetDialogProps {
     budget: Budget;
-    onBudgetUpdated: () => void;
 }
 
-export function EditBudgetDialog({ budget, onBudgetUpdated }: EditBudgetDialogProps) {
+export function EditBudgetDialog({ budget }: EditBudgetDialogProps) {
+    const { user: authUser } = useUser();
+    const db = useFirestore();
     const [open, setOpen] = useState(false);
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
     const [amount, setAmount] = useState(budget.amount.toString());
     const { toast } = useToast();
 
     const handleUpdate = () => {
-        if (!amount) {
+        if (!amount || !authUser) {
             toast({
                 variant: "destructive",
                 title: "Error",
@@ -55,22 +57,21 @@ export function EditBudgetDialog({ budget, onBudgetUpdated }: EditBudgetDialogPr
             return;
         }
 
-        updateBudget(budget.id, Number(amount));
+        updateBudget(db, authUser.uid, budget.id, Number(amount));
         toast({
             title: "Sukses",
             description: `Anggaran untuk ${budget.category} telah diperbarui.`,
         });
-        onBudgetUpdated();
         setOpen(false);
     };
     
     const handleDelete = () => {
-        deleteBudget(budget.id);
+        if (!authUser) return;
+        deleteBudget(db, authUser.uid, budget.id);
         toast({
             title: "Sukses",
             description: `Anggaran untuk ${budget.category} telah dihapus.`,
         });
-        onBudgetUpdated();
         setShowDeleteAlert(false);
     }
 

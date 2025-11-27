@@ -6,13 +6,28 @@ import { BudgetCard } from "@/components/budgets/budget-card";
 import { AddBudgetDialog } from "@/components/budgets/add-budget-dialog";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Budget } from "@/lib/types";
+import type { Budget, Transaction } from "@/lib/types";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from "firebase/firestore";
+import { LoaderCircle } from "lucide-react";
 
 export default function BudgetsPage() {
-    const [budgets, setBudgets] = useState(getBudgets());
-    const [transactions, setTransactions] = useState(getTransactions());
+    const { user: authUser } = useUser();
+    const db = useFirestore();
 
-    const spendingByCategory = transactions
+    const budgetsQuery = useMemoFirebase(() => {
+        if (!authUser) return null;
+        return collection(db, 'users', authUser.uid, 'budgets');
+    }, [db, authUser]);
+    const { data: budgets, isLoading: budgetsLoading } = useCollection<Budget>(budgetsQuery);
+
+    const transactionsQuery = useMemoFirebase(() => {
+        if (!authUser) return null;
+        return collection(db, 'users', authUser.uid, 'transactions');
+    }, [db, authUser]);
+    const { data: transactions, isLoading: transactionsLoading } = useCollection<Transaction>(transactionsQuery);
+
+    const spendingByCategory = (transactions || [])
         .filter(t => t.type === 'expense')
         .reduce((acc, t) => {
             if (!acc[t.category]) {
@@ -22,15 +37,20 @@ export default function BudgetsPage() {
             return acc;
         }, {} as Record<string, number>);
 
-    const handleBudgetUpdated = () => {
-        setBudgets([...getBudgets()]);
+    const handleBudgetAdded = (budget: Omit<Budget, 'id' | 'userId'>) => {
+        if (!authUser) return;
+        addBudget(db, authUser.uid, budget);
+    }
+
+    if (budgetsLoading || transactionsLoading) {
+        return <div className="flex h-full w-full items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>;
     }
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl md:text-3xl font-bold text-foreground">Anggaran Bulanan</h1>
-                <AddBudgetDialog onBudgetAdded={handleBudgetUpdated}>
+                <h1 className="text-2xl font-bold text-foreground md:text-3xl">Anggaran Bulanan</h1>
+                <AddBudgetDialog onBudgetAdded={handleBudgetAdded}>
                     <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Tambah Anggaran
@@ -38,17 +58,16 @@ export default function BudgetsPage() {
                 </AddBudgetDialog>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {budgets.map(budget => (
+                {(budgets || []).map(budget => (
                     <BudgetCard 
                         key={budget.id}
                         budget={budget}
                         spent={spendingByCategory[budget.category] || 0}
-                        onBudgetUpdated={handleBudgetUpdated}
                     />
                 ))}
             </div>
-            {budgets.length === 0 && (
-                <div className="text-center p-8 text-muted-foreground col-span-full">
+            {(budgets || []).length === 0 && (
+                <div className="col-span-full p-8 text-center text-muted-foreground">
                     Belum ada anggaran yang dibuat.
                 </div>
             )}

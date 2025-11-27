@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LogOut, Settings, User } from 'lucide-react';
-import { getUser, type UserProfile } from '@/lib/user-data';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import type { UserProfile } from '@/lib/user-data';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,26 +20,28 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Logo } from '../logo';
 import { BillNotification } from '../bills/bill-notification';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
+import { doc } from 'firebase/firestore';
 
 export function Header() {
   const isMobile = useIsMobile();
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isClient, setIsClient] = useState(false);
+  const { user: authUser, isUserLoading } = useUser();
+  const auth = useAuth();
+  const db = useFirestore();
+  const router = useRouter();
 
-  useEffect(() => {
-    setIsClient(true);
-    const handleStorageChange = () => {
-      setUser(getUser());
-    };
+  const userDocRef = useMemoFirebase(() => {
+    if (!db || !authUser) return null;
+    return doc(db, 'users', authUser.uid);
+  }, [db, authUser]);
 
-    // Initial load and listen for changes
-    handleStorageChange();
-    window.addEventListener('storage', handleStorageChange);
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
 
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
@@ -50,12 +53,12 @@ export function Header() {
       <div className="flex w-full items-center justify-end gap-4">
         {!isMobile && (
           <div className="flex-1 overflow-hidden whitespace-nowrap">
-            {isClient ? (
-              <h1 className="animate-marquee-slow inline-block text-xl font-bold text-foreground">
-                {user?.name || ''}
-              </h1>
+            {isUserLoading || !userProfile ? (
+              <div className="h-6 w-1/4 animate-pulse rounded-md bg-muted" />
             ) : (
-               <div className="h-6 w-1/4 rounded-md bg-muted animate-pulse" />
+              <h1 className="animate-marquee-slow inline-block text-xl font-bold text-foreground">
+                {userProfile.name}
+              </h1>
             )}
           </div>
         )}
@@ -64,8 +67,8 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-9 w-9">
-                {user?.avatar && (
-                  <AvatarImage src={user.avatar} alt="User Avatar" />
+                {userProfile?.avatar && (
+                  <AvatarImage src={userProfile.avatar} alt="User Avatar" />
                 )}
                 <AvatarFallback>
                   <User />
@@ -76,9 +79,9 @@ export function Header() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user?.name}</p>
+                <p className="text-sm font-medium leading-none">{userProfile?.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email}
+                  {userProfile?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -98,7 +101,7 @@ export function Header() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Keluar</span>
             </DropdownMenuItem>

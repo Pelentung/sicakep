@@ -20,13 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useState } from "react"
-import { addBudget } from "@/lib/data"
 import { useToast } from "@/hooks/use-toast"
+import type { Budget } from "@/lib/types"
 
 
 const expenseCategories = ["Makanan", "Transportasi", "Sewa", "Hiburan", "Belanja", "Kesehatan", "Tagihan", "Lainnya"];
 
-export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.ReactNode, onBudgetAdded: () => void }) {
+export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.ReactNode, onBudgetAdded: (budget: Omit<Budget, 'id' | 'userId'>) => void }) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('');
   const [amount, setAmount] = useState('');
@@ -42,12 +42,11 @@ export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.R
         return;
     }
     
-    addBudget({ category, amount: Number(amount) });
+    onBudgetAdded({ category, amount: Number(amount) });
     toast({
         title: "Sukses",
         description: "Anggaran baru telah ditambahkan.",
     });
-    onBudgetAdded();
     setOpen(false);
     setCategory('');
     setAmount('');

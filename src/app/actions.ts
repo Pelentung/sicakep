@@ -1,19 +1,29 @@
 'use server';
 
 import { getSpendingInsights, type SpendingInsightsInput } from '@/ai/flows/spending-insights';
-import { getFinancialSummary, getSpendingByCategory, getTransactions } from '@/lib/data';
+import { getFinancialSummary, getSpendingByCategory } from '@/lib/data';
 import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { collection, getDocs, getFirestore, query, where } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase'; // Assuming this can run on the server
+import type { Transaction } from '@/lib/types';
 
-export async function getAIInsightsAction(selectedMonth: Date): Promise<{ success: boolean; insights?: string[]; error?: string; }> {
+
+// This is a simplified server-side init. In a real app, you'd share config.
+const { firestore: db } = initializeFirebase();
+
+export async function getAIInsightsAction(userId: string, selectedMonth: Date): Promise<{ success: boolean; insights?: string[]; error?: string; }> {
   try {
-    const allTransactions = getTransactions();
+    const start = startOfMonth(selectedMonth);
+    const end = endOfMonth(selectedMonth);
 
-    const transactions = allTransactions.filter((t) => {
-        const transactionDate = parseISO(t.date);
-        const start = startOfMonth(selectedMonth);
-        const end = endOfMonth(selectedMonth);
-        return transactionDate >= start && transactionDate <= end;
-    });
+    const transactionsQuery = query(
+        collection(db, 'users', userId, 'transactions'),
+        where('date', '>=', start.toISOString()),
+        where('date', '<=', end.toISOString())
+    );
+    
+    const snapshot = await getDocs(transactionsQuery);
+    const transactions = snapshot.docs.map(doc => doc.data() as Transaction);
 
     const summary = getFinancialSummary(transactions);
     const spendingByCategory = getSpendingByCategory(transactions);

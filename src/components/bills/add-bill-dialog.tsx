@@ -14,12 +14,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { addBill } from '@/lib/data';
 import type { Bill } from '@/lib/types';
 
 interface AddBillDialogProps {
   children: React.ReactNode;
-  onBillAdded: () => void;
+  onBillAdded: (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => void;
 }
 
 export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
@@ -40,13 +39,12 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
       return;
     }
     
-    addBill({ name, amount: Number(amount), dueDate, dueTime });
+    onBillAdded({ name, amount: Number(amount), dueDate, dueTime });
 
     toast({
       title: 'Sukses',
       description: 'Tagihan baru telah ditambahkan.',
     });
-    onBillAdded();
     setOpen(false);
     setName('');
     setAmount('');

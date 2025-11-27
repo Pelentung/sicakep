@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bell } from 'lucide-react';
-import { getBills } from '@/lib/data';
 import { isPast, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,24 +11,34 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Bill } from '@/lib/types';
+
 
 export function BillNotification() {
+  const { user: authUser } = useUser();
+  const db = useFirestore();
+
+  const billsQuery = useMemoFirebase(() => {
+    if (!authUser) return null;
+    const q = query(
+      collection(db, 'users', authUser.uid, 'bills'),
+      where('isPaid', '==', false)
+    );
+    return q;
+  }, [db, authUser]);
+
+  const { data: unpaidBills } = useCollection<Bill>(billsQuery);
   const [hasDueBills, setHasDueBills] = useState(false);
 
   useEffect(() => {
-    const checkBills = () => {
-      const unpaidDueBills = getBills().some(
-        (bill) => !bill.isPaid && isPast(parseISO(bill.dueDate))
-      );
-      setHasDueBills(unpaidDueBills);
-    };
+    if (unpaidBills) {
+      const due = unpaidBills.some(bill => isPast(parseISO(bill.dueDate)));
+      setHasDueBills(due);
+    }
+  }, [unpaidBills]);
 
-    checkBills();
-    // Check every 10 seconds to see if bills have been paid
-    const interval = setInterval(checkBills, 10000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   if (!hasDueBills) {
     return null;
@@ -41,7 +50,7 @@ export function BillNotification() {
         <TooltipTrigger asChild>
           <Button asChild variant="ghost" size="icon">
             <Link href="/dashboard/bills">
-              <Bell className="h-5 w-5 text-red-500 animate-pulse" />
+              <Bell className="h-5 w-5 animate-pulse text-red-500" />
               <span className="sr-only">Lihat tagihan jatuh tempo</span>
             </Link>
           </Button>

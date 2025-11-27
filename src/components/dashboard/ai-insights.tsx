@@ -6,17 +6,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAIInsightsAction } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { useUser } from '@/firebase';
 
 export function AiInsights({ selectedMonth }: { selectedMonth: Date }) {
   const [isPending, startTransition] = useTransition();
   const [insights, setInsights] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useUser();
 
   const handleGetInsights = () => {
+    if (!user) {
+        setError("Anda harus login untuk mendapatkan wawasan.");
+        return;
+    }
+
     startTransition(async () => {
       setError(null);
       setInsights(null);
-      const result = await getAIInsightsAction(selectedMonth);
+      const result = await getAIInsightsAction(user.uid, selectedMonth);
       if (result.success) {
         setInsights(result.insights);
       } else {
@@ -32,7 +39,7 @@ export function AiInsights({ selectedMonth }: { selectedMonth: Date }) {
           <Lightbulb className="h-5 w-5 text-accent" />
           Wawasan Belanja AI
         </CardTitle>
-        <Button onClick={handleGetInsights} disabled={isPending} size="sm">
+        <Button onClick={handleGetInsights} disabled={isPending || !user} size="sm">
           {isPending ? (
             <LoaderCircle className="animate-spin" />
           ) : (
@@ -64,7 +71,7 @@ export function AiInsights({ selectedMonth }: { selectedMonth: Date }) {
             </div>
         )}
         {!isPending && !insights && !error && (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="py-4 text-center text-sm text-muted-foreground">
                 Klik tombol untuk mendapatkan analisis AI tentang kebiasaan belanja Anda.
             </p>
         )}

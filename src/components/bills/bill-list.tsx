@@ -34,13 +34,11 @@ function formatCurrency(amount: number) {
 
 interface BillListProps {
   bills: Bill[];
-  onBillUpdated: () => void;
-  onTogglePaid: (id: string) => void;
+  onTogglePaid: (id: string, currentStatus: boolean) => void;
 }
 
 export function BillList({
   bills,
-  onBillUpdated,
   onTogglePaid,
 }: BillListProps) {
   const upcomingBills = bills.filter((b) => !b.isPaid);
@@ -51,14 +49,12 @@ export function BillList({
       <BillSection
         title="Belum Dibayar"
         bills={upcomingBills}
-        onBillUpdated={onBillUpdated}
         onTogglePaid={onTogglePaid}
         emptyMessage="Tidak ada tagihan yang belum dibayar."
       />
       <BillSection
         title="Sudah Dibayar"
         bills={paidBills}
-        onBillUpdated={onBillUpdated}
         onTogglePaid={onTogglePaid}
         emptyMessage="Tidak ada tagihan yang sudah dibayar."
       />
@@ -66,15 +62,16 @@ export function BillList({
   );
 }
 
-interface BillSectionProps extends BillListProps {
+interface BillSectionProps {
   title: string;
+  bills: Bill[];
+  onTogglePaid: (id: string, currentStatus: boolean) => void;
   emptyMessage: string;
 }
 
 function BillSection({
   title,
   bills,
-  onBillUpdated,
   onTogglePaid,
   emptyMessage,
 }: BillSectionProps) {
@@ -97,7 +94,7 @@ function BillSection({
                 <Checkbox
                   id={`bill-${bill.id}`}
                   checked={bill.isPaid}
-                  onCheckedChange={() => onTogglePaid(bill.id)}
+                  onCheckedChange={() => onTogglePaid(bill.id, bill.isPaid)}
                   aria-label="Tandai sebagai lunas"
                 />
                 <div className="flex-1">
@@ -129,7 +126,7 @@ function BillSection({
                 >
                   {formatCurrency(bill.amount)}
                 </div>
-                <EditBillDialog bill={bill} onBillUpdated={onBillUpdated} />
+                <EditBillDialog bill={bill} />
               </div>
             ))}
           </div>

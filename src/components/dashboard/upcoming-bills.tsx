@@ -1,5 +1,7 @@
+'use client';
+
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { Bell, LoaderCircle } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -7,17 +9,32 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getBills } from "@/lib/data";
 import { format, parseISO } from "date-fns";
 import { id } from "date-fns/locale";
 import { Button } from "../ui/button";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, limit, orderBy } from "firebase/firestore";
+import type { Bill } from "@/lib/types";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
 }
 
 export function UpcomingBills() {
-  const bills = getBills().filter(b => !b.isPaid).slice(0, 3);
+  const { user: authUser } = useUser();
+  const db = useFirestore();
+
+  const billsQuery = useMemoFirebase(() => {
+    if (!authUser) return null;
+    return query(
+      collection(db, 'users', authUser.uid, 'bills'),
+      where('isPaid', '==', false),
+      orderBy('dueDate', 'asc'),
+      limit(3)
+    );
+  }, [db, authUser]);
+
+  const { data: bills, isLoading } = useCollection<Bill>(billsQuery);
 
   return (
     <Card>
@@ -36,7 +53,11 @@ export function UpcomingBills() {
         </Button>
       </CardHeader>
       <CardContent>
-        {bills.length > 0 ? (
+        {isLoading ? (
+            <div className="flex justify-center items-center py-4">
+                <LoaderCircle className="h-6 w-6 animate-spin"/>
+            </div>
+        ) : bills && bills.length > 0 ? (
           <ul className="space-y-4">
             {bills.map((bill) => (
               <li key={bill.id} className="flex items-center justify-between">
@@ -51,7 +72,7 @@ export function UpcomingBills() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">Tidak ada tagihan mendatang.</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">Tidak ada tagihan mendatang.</p>
         )}
       </CardContent>
     </Card>

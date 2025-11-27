@@ -1,24 +1,39 @@
 'use client';
 
 import { useState } from 'react';
-import { getBills, toggleBillPaidStatus } from '@/lib/data';
+import { addBill, toggleBillPaidStatus } from '@/lib/data';
 import type { Bill } from '@/lib/types';
 import { AddBillDialog } from '@/components/bills/add-bill-dialog';
 import { BillList } from '@/components/bills/bill-list';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, LoaderCircle } from 'lucide-react';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function BillsPage() {
-  const [bills, setBills] = useState<Bill[]>(getBills());
+  const { user: authUser } = useUser();
+  const db = useFirestore();
 
-  const refreshBills = () => {
-    setBills([...getBills()]);
+  const billsQuery = useMemoFirebase(() => {
+    if (!authUser) return null;
+    return collection(db, 'users', authUser.uid, 'bills');
+  }, [db, authUser]);
+
+  const { data: bills, isLoading: billsLoading } = useCollection<Bill>(billsQuery);
+
+  const handleBillAdded = (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => {
+    if (!authUser) return;
+    addBill(db, authUser.uid, bill);
   };
 
-  const handleTogglePaid = (id: string) => {
-    toggleBillPaidStatus(id);
-    refreshBills();
+  const handleTogglePaid = (id: string, currentStatus: boolean) => {
+    if (!authUser) return;
+    toggleBillPaidStatus(db, authUser.uid, id, currentStatus);
   };
+
+  if (billsLoading) {
+    return <div className="flex h-full w-full items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -26,7 +41,7 @@ export default function BillsPage() {
         <h1 className="text-2xl font-bold text-foreground md:text-3xl">
           Pengingat Tagihan
         </h1>
-        <AddBillDialog onBillAdded={refreshBills}>
+        <AddBillDialog onBillAdded={handleBillAdded}>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
             Tambah Tagihan
@@ -35,8 +50,7 @@ export default function BillsPage() {
       </div>
 
       <BillList
-        bills={bills}
-        onBillUpdated={refreshBills}
+        bills={bills || []}
         onTogglePaid={handleTogglePaid}
       />
     </div>

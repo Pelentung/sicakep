@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { getBills, toggleBillPaidStatus } from '@/lib/data';
+import { toggleBillPaidStatus } from '@/lib/data';
 import type { Bill } from '@/lib/types';
 import { isPast, parseISO, format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -14,8 +14,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { BellRing, Wallet } from 'lucide-react';
+import { BellRing, Wallet, LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('id-ID', {
@@ -26,23 +28,29 @@ function formatCurrency(amount: number) {
 }
 
 export function BillAlarmManager() {
+  const { user: authUser } = useUser();
+  const db = useFirestore();
+  const { toast } = useToast();
+  
+  const billsQuery = useMemoFirebase(() => {
+    if (!authUser) return null;
+    return collection(db, 'users', authUser.uid, 'bills');
+  }, [db, authUser]);
+
+  const { data: allBills } = useCollection<Bill>(billsQuery);
+
   const [dueBills, setDueBills] = useState<Bill[]>([]);
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
   const [isAlarmActive, setIsAlarmActive] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     const checkDueBills = () => {
+      if (!allBills) return;
       try {
-        const allBills = getBills();
         const now = new Date();
         const upcomingDueBills = allBills.filter(
-          (bill) => {
-            const dueDate = parseISO(bill.dueDate);
-            // Bill is unpaid and due date is in the future
-            return !bill.isPaid && dueDate > now;
-          }
+          (bill) => !bill.isPaid && parseISO(bill.dueDate) > now
         );
         if (upcomingDueBills.length > 0) {
           setDueBills(upcomingDueBills);
@@ -55,12 +63,10 @@ export function BillAlarmManager() {
     
     // Check every minute
     const interval = setInterval(checkDueBills, 1000 * 60);
-
-    // Initial check
-    checkDueBills();
+    checkDueBills(); // Initial check
 
     return () => clearInterval(interval);
-  }, []);
+  }, [allBills]);
 
   useEffect(() => {
     if (dueBills.length > 0 && currentBillIndex < dueBills.length) {
@@ -83,7 +89,6 @@ export function BillAlarmManager() {
     if (audioRef.current) {
       audioRef.current.play().catch((error) => {
         console.error('Audio play failed:', error);
-        // This toast is helpful for debugging on user's side if audio fails
         toast({
           title: 'Gagal membunyikan alarm',
           description: 'Browser mungkin memblokir suara otomatis.',
@@ -103,7 +108,6 @@ export function BillAlarmManager() {
   const handleClose = () => {
     stopAlarm();
     setIsAlarmActive(false);
-    // Move to next bill or clear if all are handled
     if (currentBillIndex < dueBills.length - 1) {
       setCurrentBillIndex(currentBillIndex + 1);
     } else {
@@ -114,8 +118,8 @@ export function BillAlarmManager() {
   
   const handleMarkAsPaid = () => {
     const bill = currentBill();
-    if (bill) {
-        toggleBillPaidStatus(bill.id);
+    if (bill && authUser) {
+        toggleBillPaidStatus(db, authUser.uid, bill.id, bill.isPaid);
         toast({
             title: 'Tagihan Dibayar',
             description: `${bill.name} telah ditandai sebagai lunas.`,
@@ -141,7 +145,7 @@ export function BillAlarmManager() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <BellRing className="h-6 w-6 text-red-500 animate-pulse" />
+              <BellRing className="h-6 w-6 animate-pulse text-red-500" />
               Pengingat Jatuh Tempo Tagihan!
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -149,8 +153,8 @@ export function BillAlarmManager() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="my-4 rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-             <div className="flex justify-between items-center mb-2">
-                <h3 className="font-bold text-lg">{currentBill().name}</h3>
+             <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-lg font-bold">{currentBill().name}</h3>
                 <div className="text-lg font-semibold">{formatCurrency(currentBill().amount)}</div>
              </div>
              <p className="text-sm text-muted-foreground">
