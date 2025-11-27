@@ -1,60 +1,29 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions to improve readability and reuse of logic.
-
-    /**
-     * Checks if the user is authenticated.
-     */
+    
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the currently authenticated user's UID matches the provided userId.
-     * This is the core function for enforcing user ownership.
-     * @param userId The user ID from the document path.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
-    /**
-     * @description Manages user profile documents.
-     * @path /users/{userId}
-     */
-    match /users/{userId} {
-      // Users can read and update their own profile.
-      allow read, update: if isOwner(userId);
-      
-      // A new user can create their own profile.
-      allow create: if isOwner(userId);
 
-      // Users are not allowed to delete their own accounts through the app.
+    match /users/{userId} {
+      allow read, update, create: if isOwner(userId);
       allow delete: if false;
 
-      /**
-       * @description Manages a user's transactions.
-       * Users can perform any action on their own transactions.
-       */
       match /transactions/{transactionId} {
-        allow read, write, create, update, delete, list: if isOwner(userId);
+        allow read, write: if isOwner(userId);
       }
 
-      /**
-       * @description Manages a user's budgets.
-       * Users can perform any action on their own budgets.
-       */
       match /budgets/{budgetId} {
-         allow read, write, create, update, delete, list: if isOwner(userId);
+        allow read, write: if isOwner(userId);
       }
 
-      /**
-       * @description Manages a user's bill reminders.
-       * Users can perform any action on their own bills.
-       */
       match /bills/{billId} {
-         allow read, write, create, update, delete, list: if isOwner(userId);
+        allow read, write: if isOwner(userId);
       }
     }
   }
