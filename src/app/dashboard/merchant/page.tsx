@@ -8,13 +8,14 @@ import { MerchantTransactionDialog } from '@/components/merchant/merchant-transa
 import { useToast } from '@/hooks/use-toast';
 import { handleMerchantTransactionAction } from '@/app/actions';
 import { useData } from '@/context/data-context';
+import type { Bill } from '@/lib/types';
 
 export default function MerchantPage() {
   const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  const { addTransaction } = useData();
+  const { addTransaction, bills, toggleBillPaidStatus } = useData();
 
   const handleMerchantClick = (merchant: Merchant) => {
     setSelectedMerchant(merchant);
@@ -25,12 +26,38 @@ export default function MerchantPage() {
     setIsDialogOpen(false);
     setSelectedMerchant(null);
   };
+  
+  const findAndPayBill = (merchantName: string) => {
+    // Logic to find a matching unpaid bill
+    const billKeywords: { [key: string]: string[] } = {
+        'PLN': ['listrik'],
+        'PDAM': ['air', 'pdam'],
+        'Internet & TV': ['internet', 'tv'],
+        'Cicilan Kredit': ['cicilan', 'kredit'],
+        'BPJS': ['bpjs'],
+    };
+
+    const keywords = billKeywords[merchantName];
+    if (!keywords) return;
+
+    const unpaidBill = bills.find(bill => 
+        !bill.isPaid && keywords.some(keyword => bill.name.toLowerCase().includes(keyword))
+    );
+
+    if (unpaidBill) {
+        toggleBillPaidStatus(unpaidBill.id, false); // Mark as paid
+        toast({
+            title: 'Tagihan Diperbarui',
+            description: `Tagihan "${unpaidBill.name}" telah ditandai lunas.`,
+        });
+    }
+  };
 
   const handleTransaction = (amount: number, customerId: string) => {
     if (!selectedMerchant) return;
 
     startTransition(async () => {
-      // Di dunia nyata, userId akan didapat dari sesi otentikasi
+      // In a real-world scenario, the userId would come from an auth session
       const result = await handleMerchantTransactionAction(
         '1',
         selectedMerchant,
@@ -39,7 +66,7 @@ export default function MerchantPage() {
       );
 
       if (result.success) {
-        // Tambahkan transaksi ke state global via context
+        // Add transaction to global state via context
         addTransaction({
           type: 'expense',
           amount: amount,
@@ -47,6 +74,11 @@ export default function MerchantPage() {
           date: new Date().toISOString(),
           description: `${selectedMerchant.name} - No: ${customerId}`,
         });
+
+        // If it's a bill payment, find and update the bill status
+        if (selectedMerchant.type === 'payment') {
+            findAndPayBill(selectedMerchant.name);
+        }
         
         toast({
           title: 'Transaksi Berhasil',
