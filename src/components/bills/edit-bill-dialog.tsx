@@ -50,7 +50,7 @@ export function EditBillDialog({ bill, onUpdate }: EditBillDialogProps) {
   const [dueTime, setDueTime] = useState(bill.dueTime);
   const { toast } = useToast();
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!name || amount === undefined || !dueDate || !dueTime) {
       toast({
         variant: 'destructive',
@@ -60,7 +60,7 @@ export function EditBillDialog({ bill, onUpdate }: EditBillDialogProps) {
       return;
     }
 
-    updateBill(bill.id, { name, amount: Number(amount), dueDate, dueTime });
+    await updateBill(bill.id, { name, amount: Number(amount), dueDate, dueTime });
     toast({
       title: 'Sukses',
       description: 'Tagihan telah diperbarui.',
@@ -69,8 +69,8 @@ export function EditBillDialog({ bill, onUpdate }: EditBillDialogProps) {
     // No need to call onUpdate, context handles state
   };
 
-  const handleDelete = () => {
-    deleteBill(bill.id);
+  const handleDelete = async () => {
+    await deleteBill(bill.id);
     toast({
       title: 'Sukses',
       description: 'Tagihan telah dihapus.',

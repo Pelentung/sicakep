@@ -1,7 +1,7 @@
 'use server';
 
 import { getSpendingInsights, type SpendingInsightsInput } from '@/ai/flows/spending-insights';
-import { getInitialTransactions, getFinancialSummary, getSpendingByCategory } from '@/lib/data';
+import { getTransactions, getFinancialSummary, getSpendingByCategory } from '@/lib/data';
 import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import type { Merchant } from '@/lib/merchant-data';
 
@@ -12,7 +12,7 @@ export async function getAIInsightsAction(userId: string, selectedMonth: Date): 
     const end = endOfMonth(selectedMonth);
 
     // AI action still reads from the source file for analysis
-    const allTransactions = getInitialTransactions();
+    const allTransactions = await getTransactions(userId);
 
     const transactions = allTransactions.filter(t => {
         const transactionDate = parseISO(t.date);

@@ -27,13 +27,13 @@ import { CurrencyInput } from "../ui/currency-input"
 
 const expenseCategories = ["Makanan", "Transportasi", "Sewa", "Hiburan", "Belanja", "Kesehatan", "Tagihan", "Lainnya"];
 
-export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.ReactNode, onBudgetAdded: (budget: Omit<Budget, 'id' | 'userId'>) => void }) {
+export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.ReactNode, onBudgetAdded: (budget: Omit<Budget, 'id' | 'userId'>) => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('');
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const { toast } = useToast();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!category || amount === undefined) {
         toast({
             variant: "destructive",
@@ -43,7 +43,7 @@ export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.R
         return;
     }
     
-    onBudgetAdded({ category, amount: Number(amount) });
+    await onBudgetAdded({ category, amount: Number(amount) });
     toast({
         title: "Sukses",
         description: "Anggaran baru telah ditambahkan.",

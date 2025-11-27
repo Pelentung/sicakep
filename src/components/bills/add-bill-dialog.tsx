@@ -19,7 +19,7 @@ import { CurrencyInput } from '../ui/currency-input';
 
 interface AddBillDialogProps {
   children: React.ReactNode;
-  onBillAdded: (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => void;
+  onBillAdded: (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => Promise<void>;
 }
 
 export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
@@ -30,7 +30,7 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
   const [dueTime, setDueTime] = useState('09:00');
   const { toast } = useToast();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name || amount === undefined || !dueDate || !dueTime) {
       toast({
         variant: 'destructive',
@@ -40,7 +40,7 @@ export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {
       return;
     }
     
-    onBillAdded({ name, amount: Number(amount), dueDate, dueTime });
+    await onBillAdded({ name, amount: Number(amount), dueDate, dueTime });
 
     toast({
       title: 'Sukses',

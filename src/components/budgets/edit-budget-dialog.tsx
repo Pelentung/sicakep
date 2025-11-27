@@ -46,7 +46,7 @@ export function EditBudgetDialog({ budget, onUpdate }: EditBudgetDialogProps) {
     const [amount, setAmount] = useState<number | undefined>(budget.amount);
     const { toast } = useToast();
 
-    const handleUpdate = () => {
+    const handleUpdate = async () => {
         if (amount === undefined) {
             toast({
                 variant: "destructive",
@@ -56,7 +56,7 @@ export function EditBudgetDialog({ budget, onUpdate }: EditBudgetDialogProps) {
             return;
         }
 
-        updateBudget(budget.id, Number(amount));
+        await updateBudget(budget.id, Number(amount));
         toast({
             title: "Sukses",
             description: `Anggaran untuk ${budget.category} telah diperbarui.`,
@@ -64,8 +64,8 @@ export function EditBudgetDialog({ budget, onUpdate }: EditBudgetDialogProps) {
         setOpen(false);
     };
     
-    const handleDelete = () => {
-        deleteBudget(budget.id);
+    const handleDelete = async () => {
+        await deleteBudget(budget.id);
         toast({
             title: "Sukses",
             description: `Anggaran untuk ${budget.category} telah dihapus.`,

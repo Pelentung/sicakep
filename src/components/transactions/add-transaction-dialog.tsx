@@ -32,7 +32,7 @@ const incomeCategories = ["Gaji", "Freelance", "Investasi", "Lainnya"];
 const expenseCategories = ["Makanan", "Transportasi", "Sewa", "Hiburan", "Belanja", "Kesehatan", "Tagihan", "Lainnya"];
 
 interface AddTransactionDialogProps {
-    onTransactionAdded: (transaction: Omit<Transaction, 'id' | 'userId'>) => void;
+    onTransactionAdded: (transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
 }
 
 export function AddTransactionDialog({ onTransactionAdded }: AddTransactionDialogProps) {
@@ -44,7 +44,7 @@ export function AddTransactionDialog({ onTransactionAdded }: AddTransactionDialo
   const [description, setDescription] = useState('');
   const { toast } = useToast();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (amount === undefined || !category || !date) {
         toast({
             variant: "destructive",
@@ -54,7 +54,7 @@ export function AddTransactionDialog({ onTransactionAdded }: AddTransactionDialo
         return;
     }
     
-    onTransactionAdded({
+    await onTransactionAdded({
         type,
         amount: Number(amount),
         category,

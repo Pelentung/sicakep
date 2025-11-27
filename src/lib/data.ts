@@ -1,26 +1,66 @@
-import { formatISO, parseISO } from 'date-fns';
+import { getFirestore, collection, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, writeBatch } from 'firebase/firestore';
+import { app } from '@/firebase/config'; // Assuming you have this config file
 import type { Transaction, Budget, Bill, FinancialSummary } from './types';
-import initialTransactions from '@/database/transactions.json';
-import initialBudgets from '@/database/budgets.json';
-import initialBills from '@/database/bills.json';
+import { parseISO } from 'date-fns';
 
-// These functions now simulate API calls that might fetch initial data,
-// but the actual state management will be in the DataContext.
+const db = getFirestore(app);
 
-export const getInitialTransactions = (): Transaction[] => {
-  return initialTransactions;
+// --- Transactions ---
+export const getTransactions = async (userId: string): Promise<Transaction[]> => {
+    const q = query(collection(db, 'users', userId, 'transactions'), orderBy('date', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
 };
 
-export const getInitialBudgets = (): Budget[] => {
-  return initialBudgets;
+export const addTransaction = async (userId: string, transaction: Omit<Transaction, 'id' | 'userId'>): Promise<Transaction> => {
+    const docRef = await addDoc(collection(db, 'users', userId, 'transactions'), transaction);
+    return { id: docRef.id, userId, ...transaction };
 };
 
-export const getInitialBills = (): Bill[] => {
-  return initialBills.sort((a,b) => parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime());
+// --- Budgets ---
+export const getBudgets = async (userId: string): Promise<Budget[]> => {
+    const querySnapshot = await getDocs(collection(db, 'users', userId, 'budgets'));
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget));
 };
 
-// These functions are kept for utility but no longer manage state directly.
-// The state mutation logic is now in DataContext.
+export const addBudget = async (userId: string, budget: Omit<Budget, 'id' | 'userId'>): Promise<Budget> => {
+    const docRef = await addDoc(collection(db, 'users', userId, 'budgets'), budget);
+    return { id: docRef.id, userId, ...budget };
+};
+
+export const updateBudget = async (userId: string, budgetId: string, newAmount: number): Promise<void> => {
+    const budgetRef = doc(db, 'users', userId, 'budgets', budgetId);
+    await updateDoc(budgetRef, { amount: newAmount });
+};
+
+export const deleteBudget = async (userId: string, budgetId: string): Promise<void> => {
+    await deleteDoc(doc(db, 'users', userId, 'budgets', budgetId));
+};
+
+
+// --- Bills ---
+export const getBills = async (userId: string): Promise<Bill[]> => {
+    const q = query(collection(db, 'users', userId, 'bills'), orderBy('dueDate', 'asc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bill));
+};
+
+export const addBill = async (userId: string, bill: Omit<Bill, 'id' | 'userId'>): Promise<Bill> => {
+    const docRef = await addDoc(collection(db, 'users', userId, 'bills'), bill);
+    return { id: docRef.id, userId, ...bill };
+};
+
+export const updateBill = async (userId: string, billId: string, updates: Partial<Bill>): Promise<void> => {
+    const billRef = doc(db, 'users', userId, 'bills', billId);
+    await updateDoc(billRef, updates);
+};
+
+export const deleteBill = async (userId: string, billId: string): Promise<void> => {
+    await deleteDoc(doc(db, 'users', userId, 'bills', billId));
+};
+
+
+// --- Utility Functions ---
 
 export const getFinancialSummary = (transactions: Transaction[]): FinancialSummary => {
   const totalIncome = transactions
