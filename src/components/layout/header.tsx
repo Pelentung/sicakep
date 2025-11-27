@@ -1,10 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Settings, User } from 'lucide-react';
-import type { UserProfile } from '@/lib/user-data';
-import { getUser } from '@/lib/user-data';
+import { Settings, User, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,17 +17,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Logo } from '../logo';
 import { BillNotification } from '../bills/bill-notification';
+import { useAuth } from '@/context/auth-context';
+import { Skeleton } from '../ui/skeleton';
 
 export function Header() {
   const isMobile = useIsMobile();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isUserLoading, setIsUserLoading] = useState(true);
+  const { user, loading, logout } = useAuth();
 
-  useEffect(() => {
-    const user = getUser();
-    setUserProfile(user);
-    setIsUserLoading(false);
-  }, []);
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
@@ -42,13 +35,13 @@ export function Header() {
       <div className="flex w-full items-center justify-end gap-4">
         {!isMobile && (
           <div className="flex-1 overflow-hidden whitespace-nowrap">
-            {isUserLoading || !userProfile ? (
-              <div className="h-6 w-1/4 animate-pulse rounded-md bg-muted" />
-            ) : (
+            {loading ? (
+              <Skeleton className="h-6 w-1/4 rounded-md" />
+            ) : user ? (
               <h1 className="animate-marquee-slow inline-block text-xl font-bold text-foreground">
-                {userProfile.name}
+                {user.displayName || user.email}
               </h1>
-            )}
+            ) : null}
           </div>
         )}
         <BillNotification />
@@ -56,8 +49,8 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-9 w-9">
-                {userProfile?.avatar && (
-                  <AvatarImage src={userProfile.avatar} alt="User Avatar" />
+                {user?.photoURL && (
+                  <AvatarImage src={user.photoURL} alt={user.displayName || 'User Avatar'} />
                 )}
                 <AvatarFallback>
                   <User />
@@ -68,9 +61,9 @@ export function Header() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{userProfile?.name}</p>
+                <p className="text-sm font-medium leading-none">{user?.displayName}</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {userProfile?.email}
+                  {user?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -89,6 +82,11 @@ export function Header() {
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Keluar</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

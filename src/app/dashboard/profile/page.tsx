@@ -7,32 +7,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { getUser, updateUser, type UserProfile } from '@/lib/user-data';
+import { updateUserProfile, type UserProfileData } from '@/firebase/user';
 import { User as UserIcon, LoaderCircle } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 
 export default function ProfilePage() {
   const { toast } = useToast();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const userData = getUser();
-    setUser(userData);
-    if (userData) {
-      setName(userData.name || '');
-      setEmail(userData.email || '');
-      setPhone(userData.phone || '');
-      setAvatarPreview(userData.avatar || null);
+    if (user) {
+      setName(user.displayName || '');
+      setPhone(user.phone || '');
+      setAvatarPreview(user.photoURL || null);
     }
-    setLoading(false);
-  }, []);
+  }, [user]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -50,27 +46,45 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const updatedProfile: UserProfile = {
-        ...user,
-        name,
-        email,
-        phone,
-        avatar: avatarPreview || '',
-    };
+    setIsSaving(true);
+    try {
+      const updatedProfile: Partial<UserProfileData> = {
+          displayName: name,
+          phone,
+          // In a real app, you'd upload the avatarPreview to Firebase Storage first
+          // and get a URL. For now, we'll just save the data URL if it's new.
+          photoURL: avatarPreview || user.photoURL || '',
+      };
 
-    updateUser(updatedProfile);
-    toast({
-      title: 'Profil Diperbarui',
-      description: 'Informasi profil Anda telah berhasil disimpan.',
-    });
+      await updateUserProfile(user.uid, updatedProfile);
+      await refreshUser(); // Refresh user data in context
+
+      toast({
+        title: 'Profil Diperbarui',
+        description: 'Informasi profil Anda telah berhasil disimpan.',
+      });
+    } catch (error) {
+        console.error("Profile update error:", error);
+        toast({
+            title: 'Gagal Memperbarui Profil',
+            description: 'Terjadi kesalahan saat menyimpan data.',
+            variant: 'destructive'
+        });
+    } finally {
+        setIsSaving(false);
+    }
   };
 
-  if (loading) {
+  if (authLoading) {
     return <div className="flex h-full w-full items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>;
+  }
+  
+  if (!user) {
+    return <div className="flex h-full w-full items-center justify-center">Silakan login untuk melihat profil Anda.</div>;
   }
 
   return (
@@ -94,7 +108,7 @@ export default function ProfilePage() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-2">
-                <Button type="button" onClick={handleAvatarClick}>
+                <Button type="button" onClick={handleAvatarClick} disabled={isSaving}>
                   Unggah Foto
                 </Button>
                 <p className="text-xs text-muted-foreground">PNG, JPG, GIF hingga 10MB.</p>
@@ -110,20 +124,23 @@ export default function ProfilePage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Nama</Label>
-                <Input id="name" name="name" value={name} onChange={(e) => setName(e.target.value)} />
+                <Input id="name" name="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isSaving}/>
               </div>
-              <div className="space-y-2">
+               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input id="email" name="email" type="email" value={user.email || ''} disabled />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telepon</Label>
-                <Input id="phone" name="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <Input id="phone" name="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isSaving}/>
               </div>
             </div>
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
-            <Button type="submit">Simpan Perubahan</Button>
+            <Button type="submit" disabled={isSaving}>
+                {isSaving && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                Simpan Perubahan
+            </Button>
           </CardFooter>
         </form>
       </Card>

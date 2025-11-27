@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from '@/context/auth-context';
+import { DataProvider } from '@/context/data-context';
 
 export const metadata: Metadata = {
   title: 'SICAKEP',
@@ -26,8 +28,12 @@ export default function RootLayout({
         <meta name="theme-color" content="#4a8f9e" />
       </head>
       <body className={cn('font-body antialiased')}>
-        {children}
-        <Toaster />
+        <AuthProvider>
+          <DataProvider>
+            {children}
+            <Toaster />
+          </DataProvider>
+        </AuthProvider>
       </body>
     </html>
   );

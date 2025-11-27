@@ -15,9 +15,7 @@ import {
     deleteBill as deleteBillApi,
 } from '@/lib/data';
 import { formatISO } from 'date-fns';
-
-// Mock user ID. In a real app, this would come from an auth context.
-const MOCK_USER_ID = '1';
+import { useAuth } from './auth-context';
 
 interface DataContextType {
   transactions: Transaction[];
@@ -30,71 +28,91 @@ interface DataContextType {
   deleteBudget: (id: string) => Promise<void>;
   refreshBudgets: () => void;
   addBill: (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => Promise<void>;
-  updateBill: (id: string, updates: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => Promise<void>;
+  updateBill: (id: string, updates: Partial<Omit<Bill, 'id' | 'userId'>>) => Promise<void>;
   deleteBill: (id: string) => Promise<void>;
   toggleBillPaidStatus: (id: string, currentStatus: boolean) => Promise<void>;
   refreshBills: () => void;
+  clearLocalData: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [transactionsData, budgetsData, billsData] = await Promise.all([
-        getTransactions(MOCK_USER_ID),
-        getBudgets(MOCK_USER_ID),
-        getBills(MOCK_USER_ID),
-      ]);
-      setTransactions(transactionsData);
-      setBudgets(budgetsData);
-      setBills(billsData);
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-      // Handle error appropriately, e.g., show a toast notification
-    } finally {
-      setLoading(false);
-    }
+  const clearLocalData = useCallback(() => {
+    setTransactions([]);
+    setBudgets([]);
+    setBills([]);
+    setLoading(true);
   }, []);
 
   useEffect(() => {
+    const fetchData = async () => {
+      if (!user) {
+        clearLocalData();
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        const [transactionsData, budgetsData, billsData] = await Promise.all([
+          getTransactions(user.uid),
+          getBudgets(user.uid),
+          getBills(user.uid),
+        ]);
+        setTransactions(transactionsData);
+        setBudgets(budgetsData);
+        setBills(billsData);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchData();
-  }, [fetchData]);
+  }, [user, clearLocalData]);
 
   const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id' | 'userId'>) => {
-    const newTransaction = await addTransactionApi(MOCK_USER_ID, transaction);
+    if (!user) throw new Error("User not authenticated");
+    const newTransaction = await addTransactionApi(user.uid, transaction);
     setTransactions(prev => [newTransaction, ...prev]);
-  }, []);
+  }, [user]);
 
   const addBudget = useCallback(async (budget: Omit<Budget, 'id' | 'userId'>) => {
-    const newBudget = await addBudgetApi(MOCK_USER_ID, budget);
+    if (!user) throw new Error("User not authenticated");
+    const newBudget = await addBudgetApi(user.uid, budget);
     setBudgets(prev => [...prev, newBudget]);
-  }, []);
+  }, [user]);
 
   const updateBudget = useCallback(async (id: string, newAmount: number) => {
-    await updateBudgetApi(MOCK_USER_ID, id, newAmount);
+    if (!user) throw new Error("User not authenticated");
+    await updateBudgetApi(user.uid, id, newAmount);
     setBudgets(prev => prev.map(b => b.id === id ? { ...b, amount: newAmount } : b));
-  }, []);
+  }, [user]);
 
   const deleteBudget = useCallback(async (id: string) => {
-    await deleteBudgetApi(MOCK_USER_ID, id);
+    if (!user) throw new Error("User not authenticated");
+    await deleteBudgetApi(user.uid, id);
     setBudgets(prev => prev.filter(b => b.id !== id));
-  }, []);
+  }, [user]);
 
   const refreshBudgets = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    const budgetsData = await getBudgets(MOCK_USER_ID);
+    const budgetsData = await getBudgets(user.uid);
     setBudgets(budgetsData);
     setLoading(false);
-  }, []);
+  }, [user]);
   
   const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => {
+    if (!user) throw new Error("User not authenticated");
+    
     const [year, month, day] = bill.dueDate.split('-').map(Number);
     const [hours, minutes] = bill.dueTime.split(':').map(Number);
     const dueDate = new Date(year, month - 1, day, hours, minutes);
@@ -105,29 +123,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
         dueDate: formatISO(dueDate),
     };
     
-    const newBill = await addBillApi(MOCK_USER_ID, newBillData);
+    const newBill = await addBillApi(user.uid, newBillData);
     setBills(prev => [...prev, newBill].sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
-  }, []);
+  }, [user]);
 
-  const updateBill = useCallback(async (id: string, updates: Omit<Bill, 'id'| 'isPaid' | 'userId'>) => {
-      const [year, month, day] = updates.dueDate.split('-').map(Number);
-      const [hours, minutes] = updates.dueTime.split(':').map(Number);
-      const dueDate = new Date(year, month - 1, day, hours, minutes);
-      const finalUpdates = { ...updates, dueDate: formatISO(dueDate) };
+  const updateBill = useCallback(async (id: string, updates: Partial<Omit<Bill, 'id' | 'userId'>>) => {
+      if (!user) throw new Error("User not authenticated");
+      
+      let finalUpdates: Partial<Bill> = { ...updates };
 
-      await updateBillApi(MOCK_USER_ID, id, finalUpdates);
-      setBills(prev => prev.map(b => b.id === id ? { ...b, ...finalUpdates } : b)
+      if (updates.dueDate && 'dueTime' in updates) {
+        const [year, month, day] = updates.dueDate.split('-').map(Number);
+        const [hours, minutes] = (updates.dueTime || '00:00').split(':').map(Number);
+        const dueDate = new Date(year, month - 1, day, hours, minutes);
+        finalUpdates = { ...updates, dueDate: formatISO(dueDate) };
+      }
+
+      await updateBillApi(user.uid, id, finalUpdates);
+      setBills(prev => prev.map(b => b.id === id ? { ...b, ...finalUpdates } as Bill : b)
                           .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
-  }, []);
+  }, [user]);
 
   const deleteBill = useCallback(async (id: string) => {
-      await deleteBillApi(MOCK_USER_ID, id);
+      if (!user) throw new Error("User not authenticated");
+      await deleteBillApi(user.uid, id);
       setBills(prev => prev.filter(b => b.id !== id));
-  }, []);
+  }, [user]);
 
   const toggleBillPaidStatus = useCallback(async (id: string, currentStatus: boolean) => {
+      if (!user) throw new Error("User not authenticated");
+      
       const newStatus = !currentStatus;
-      await updateBillApi(MOCK_USER_ID, id, { isPaid: newStatus });
+      await updateBillApi(user.uid, id, { isPaid: newStatus });
 
       const bill = bills.find(b => b.id === id);
       if (!bill) return;
@@ -143,14 +170,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
       
       setBills(prev => prev.map(b => b.id === id ? { ...b, isPaid: newStatus } : b));
-  }, [bills, addTransaction]);
+  }, [bills, addTransaction, user]);
 
   const refreshBills = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
-    const billsData = await getBills(MOCK_USER_ID);
+    const billsData = await getBills(user.uid);
     setBills(billsData);
     setLoading(false);
-  }, []);
+  }, [user]);
 
   const value = {
     transactions,
@@ -167,6 +195,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     deleteBill,
     toggleBillPaidStatus,
     refreshBills,
+    clearLocalData
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

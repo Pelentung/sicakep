@@ -9,12 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { handleMerchantTransactionAction } from '@/app/actions';
 import { useData } from '@/context/data-context';
 import type { Bill } from '@/lib/types';
+import { useAuth } from '@/context/auth-context';
 
 export default function MerchantPage() {
   const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { addTransaction, bills, toggleBillPaidStatus } = useData();
 
   const handleMerchantClick = (merchant: Merchant) => {
@@ -54,12 +56,11 @@ export default function MerchantPage() {
   };
 
   const handleTransaction = (amount: number, customerId: string) => {
-    if (!selectedMerchant) return;
+    if (!selectedMerchant || !user) return;
 
     startTransition(async () => {
-      // In a real-world scenario, the userId would come from an auth session
       const result = await handleMerchantTransactionAction(
-        '1',
+        user.uid,
         selectedMerchant,
         amount,
         customerId
