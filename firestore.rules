@@ -56,9 +56,8 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId) && hasValidUserDataOnCreate(userId);
-      allow update: if isOwner(userId) && isUserDataImmutable();
+      allow read, update: if isOwner(userId);
+      allow create: if isSignedIn() && request.auth.uid == userId && hasValidUserDataOnCreate(userId);
       allow delete: if false; // Generally, users shouldn't delete their own accounts directly.
 
       /**
@@ -66,12 +65,7 @@ service cloud.firestore {
        * @path /users/{userId}/transactions/{transactionId}
        */
       match /transactions/{transactionId} {
-        allow read, list, create, update, delete: if isOwner(userId)
-            && (
-                (request.method == 'create' && hasValidSubcollectionDataOnCreate(userId)) ||
-                (request.method == 'update' && isSubcollectionDataImmutable()) ||
-                (request.method in ['get', 'list', 'delete'])
-            );
+        allow read, write: if isOwner(userId);
       }
 
       /**
@@ -79,12 +73,7 @@ service cloud.firestore {
        * @path /users/{userId}/budgets/{budgetId}
        */
       match /budgets/{budgetId} {
-         allow read, list, create, update, delete: if isOwner(userId)
-            && (
-                (request.method == 'create' && hasValidSubcollectionDataOnCreate(userId)) ||
-                (request.method == 'update' && isSubcollectionDataImmutable()) ||
-                (request.method in ['get', 'list', 'delete'])
-            );
+         allow read, write: if isOwner(userId);
       }
 
       /**
@@ -92,12 +81,7 @@ service cloud.firestore {
        * @path /users/{userId}/bills/{billId}
        */
       match /bills/{billId} {
-         allow read, list, create, update, delete: if isOwner(userId)
-            && (
-                (request.method == 'create' && hasValidSubcollectionDataOnCreate(userId)) ||
-                (request.method == 'update' && isSubcollectionDataImmutable()) ||
-                (request.method in ['get', 'list', 'delete'])
-            );
+         allow read, write: if isOwner(userId);
       }
     }
   }
