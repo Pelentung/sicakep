@@ -5,7 +5,7 @@ import { onAuthStateChanged, User, signInWithCustomToken } from 'firebase/auth';
 import { auth, db } from '@/firebase/config';
 import { signUp as signUpApi, login as loginApi, logout as logoutApi, type UserProfileData } from '@/firebase/auth';
 import { doc, getDoc, FirestoreError, collection, query, where, getDocs } from 'firebase/firestore';
-import { FirestorePermissionError, OperationType } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/lib/events';
 
 export interface UserData extends UserProfileData {
@@ -70,10 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(fullUserData);
         } catch (error) {
             console.error("Failed to fetch user profile after auth state change:", error);
+            // Don't set user to null, but maybe a state with an error
+            // For now, we set a minimal user object to avoid breaking the UI completely
             setUser({ 
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
-                displayName: firebaseUser.displayName || 'Error Loading Profile',
+                displayName: 'Error Loading Profile',
                 photoURL: firebaseUser.photoURL || '',
                 phone: ''
             });
@@ -107,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
         await signUpApi(email, password, displayName);
+        // onAuthStateChanged will handle setting the user
     } catch(error) {
         setLoading(false);
         throw error;
@@ -117,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
         await loginApi(email, password);
+        // onAuthStateChanged will handle setting the user
     } catch(error) {
         setLoading(false);
         throw error;
@@ -155,11 +159,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.error("signInWithCustomToken failed. This is expected without a real server.", err.message);
               console.log("Simulating successful login locally.");
               
-              // Since custom token fails without a server, manually set user state
-              const firebaseUser = { uid, email } as User;
-              const fullUserData = await fetchUserProfile(firebaseUser);
-              setUser(fullUserData);
-              setLoading(false);
+              // Since custom token fails without a server, manually trigger onAuthStateChanged logic
+              const firebaseUser = { uid, email } as User; // A mock user object
+              try {
+                const fullUserData = await fetchUserProfile(firebaseUser);
+                setUser(fullUserData);
+              } catch(e) {
+                // Error is already emitted by fetchUserProfile
+              } finally {
+                setLoading(false);
+              }
           });
 
       } catch (error) {
