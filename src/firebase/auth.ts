@@ -45,8 +45,8 @@ export const signUp = async (email: string, password: string, displayName: strin
             );
             errorEmitter.emit('permission-error', customError);
         }
-        // Re-throw the original error so the UI knows the signup failed overall
-        throw error;
+        // Do not re-throw the error, let the emitter handle it.
+        // This allows the signup flow to continue but still reports the permission issue.
     }
 
 
