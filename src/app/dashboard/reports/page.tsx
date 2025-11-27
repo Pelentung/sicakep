@@ -1,25 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getFinancialSummary, getSpendingByCategory, getTransactions } from '@/lib/data';
+import { useState } from 'react';
+import { getFinancialSummary, getSpendingByCategory } from '@/lib/data';
 import { IncomeExpenseChart } from '@/components/reports/income-expense-chart';
 import { CategorySpendingChart } from '@/components/reports/category-spending-chart';
 import { MonthPicker } from '@/components/month-picker';
 import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { LoaderCircle } from 'lucide-react';
-import type { Transaction } from '@/lib/types';
+import { useData } from '@/context/data-context';
+
 
 export default function ReportsPage() {
+  const { transactions, loading } = useData();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setAllTransactions(getTransactions());
-    setLoading(false);
-  }, []);
 
-  const filteredTransactions = allTransactions.filter((t) => {
+  const filteredTransactions = transactions.filter((t) => {
     const transactionDate = parseISO(t.date);
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);

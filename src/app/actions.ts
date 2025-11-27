@@ -1,9 +1,8 @@
 'use server';
 
 import { getSpendingInsights, type SpendingInsightsInput } from '@/ai/flows/spending-insights';
-import { addTransaction, getFinancialSummary, getSpendingByCategory, getTransactions } from '@/lib/data';
+import { getInitialTransactions, getFinancialSummary, getSpendingByCategory } from '@/lib/data';
 import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
-import type { Transaction } from '@/lib/types';
 import type { Merchant } from '@/lib/merchant-data';
 
 
@@ -12,7 +11,8 @@ export async function getAIInsightsAction(userId: string, selectedMonth: Date): 
     const start = startOfMonth(selectedMonth);
     const end = endOfMonth(selectedMonth);
 
-    const allTransactions = getTransactions();
+    // AI action still reads from the source file for analysis
+    const allTransactions = getInitialTransactions();
 
     const transactions = allTransactions.filter(t => {
         const transactionDate = parseISO(t.date);
@@ -54,48 +54,19 @@ export async function handleMerchantTransactionAction(
   // --- TITIK INTEGRASI API PIHAK KETIGA ---
   // =================================================================
   // Di sinilah Anda akan memanggil API dari payment gateway atau aggregator PPOB.
-  // Anda harus menggunakan kunci API rahasia Anda, yang harus disimpan dengan aman
-  // sebagai environment variable di server, bukan di kode frontend.
+  // Kode di sini hanya simulasi dan tidak melakukan transaksi nyata.
 
   try {
-    // CONTOH: Simulasi pemanggilan API ke pihak ketiga
-    // const response = await fetch('https://api.paymentgateway.com/v1/transact', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${process.env.PAYMENT_GATEWAY_API_KEY}`, // Ambil API key dari environment variables
-    //   },
-    //   body: JSON.stringify({
-    //     merchantId: merchant.id,
-    //     customerId: customerId,
-    //     amount: amount,
-    //     // ... data lain yang mungkin diperlukan
-    //   }),
-    // });
-
-    // const result = await response.json();
-
-    // if (!response.ok || result.status !== 'success') {
-    //   throw new Error(result.message || 'Gagal menghubungi penyedia layanan.');
-    // }
-
+    // --- (SIMULASI PANGGILAN API) ---
+    // Di aplikasi nyata, Anda akan menggunakan fetch() untuk memanggil API pihak ketiga
+    // dan menunggu responsnya.
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulasi penundaan jaringan
     // --- (AKHIR DARI SIMULASI) ---
 
-    // Jika pemanggilan API berhasil, catat transaksi di database lokal Anda.
-    const transaction: Omit<Transaction, 'id' | 'userId'> = {
-      type: 'expense',
-      amount: amount,
-      category: merchant.category,
-      date: new Date().toISOString(),
-      description: `${merchant.name} - No: ${customerId}`,
-    };
-    
-    // Fungsi ini menambahkan transaksi ke file JSON lokal kita
-    addTransaction(transaction);
-
+    // Jika pemanggilan API (simulasi) berhasil, kirim respons sukses.
+    // Pencatatan transaksi sekarang ditangani di sisi klien melalui context.
     const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
     
-    // Kirim respons sukses kembali ke client
     return { 
       success: true,
       message: `Pembayaran ${merchant.name} sebesar ${formattedAmount} telah berhasil.`
@@ -103,7 +74,6 @@ export async function handleMerchantTransactionAction(
 
   } catch (error: any) {
     console.error('Merchant Transaction Error:', error);
-    // Kirim respons error kembali ke client
     return { success: false, error: error.message || 'Terjadi kesalahan pada server.' };
   }
 }

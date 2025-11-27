@@ -12,27 +12,25 @@ import {
 } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
 import { id } from "date-fns/locale";
-import { getBills } from '@/lib/data';
 import { Button } from "../ui/button";
 import type { Bill } from "@/lib/types";
+import { useData } from '@/context/data-context';
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
 }
 
 export function UpcomingBills() {
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { bills, loading } = useData();
+  const [upcomingBills, setUpcomingBills] = useState<Bill[]>([]);
 
   useEffect(() => {
-      const allBills = getBills();
-      const upcoming = allBills
+      const upcoming = bills
           .filter(b => !b.isPaid)
           .sort((a,b) => parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime())
           .slice(0, 3);
-      setBills(upcoming);
-      setIsLoading(false);
-  }, []);
+      setUpcomingBills(upcoming);
+  }, [bills]);
 
   return (
     <Card>
@@ -51,13 +49,13 @@ export function UpcomingBills() {
         </Button>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {loading ? (
             <div className="flex justify-center items-center py-4">
                 <LoaderCircle className="h-6 w-6 animate-spin"/>
             </div>
-        ) : bills.length > 0 ? (
+        ) : upcomingBills.length > 0 ? (
           <ul className="space-y-4">
-            {bills.map((bill) => (
+            {upcomingBills.map((bill) => (
               <li key={bill.id} className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{bill.name}</p>

@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import type { Merchant } from '@/lib/merchant-data';
 import { merchants } from '@/lib/merchant-data';
 import { MerchantCard } from '@/components/merchant/merchant-card';
 import { MerchantTransactionDialog } from '@/components/merchant/merchant-transaction-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { handleMerchantTransactionAction } from '@/app/actions';
+import { useData } from '@/context/data-context';
 
 export default function MerchantPage() {
   const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  const router = useRouter();
+  const { addTransaction } = useData();
 
   const handleMerchantClick = (merchant: Merchant) => {
     setSelectedMerchant(merchant);
@@ -31,15 +31,28 @@ export default function MerchantPage() {
 
     startTransition(async () => {
       // Di dunia nyata, userId akan didapat dari sesi otentikasi
-      const result = await handleMerchantTransactionAction('1', selectedMerchant, amount, customerId);
+      const result = await handleMerchantTransactionAction(
+        '1',
+        selectedMerchant,
+        amount,
+        customerId
+      );
 
       if (result.success) {
+        // Tambahkan transaksi ke state global via context
+        addTransaction({
+          type: 'expense',
+          amount: amount,
+          category: selectedMerchant.category,
+          date: new Date().toISOString(),
+          description: `${selectedMerchant.name} - No: ${customerId}`,
+        });
+        
         toast({
           title: 'Transaksi Berhasil',
           description: result.message,
         });
         handleDialogClose();
-        router.refresh(); // Refresh data di seluruh aplikasi
       } else {
         toast({
           variant: 'destructive',

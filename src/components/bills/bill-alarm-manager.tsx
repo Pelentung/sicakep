@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { getBills, toggleBillPaidStatus } from '@/lib/data';
 import type { Bill } from '@/lib/types';
-import { isPast, parseISO, format } from 'date-fns';
+import { parseISO, format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import {
   AlertDialog,
@@ -16,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { BellRing, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useData } from '@/context/data-context';
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('id-ID', {
@@ -27,22 +27,19 @@ function formatCurrency(amount: number) {
 
 export function BillAlarmManager() {
   const { toast } = useToast();
+  const { bills, toggleBillPaidStatus, refreshBills } = useData();
   
-  const [allBills, setAllBills] = useState<Bill[]>([]);
   const [dueBills, setDueBills] = useState<Bill[]>([]);
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
   const [isAlarmActive, setIsAlarmActive] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  useEffect(() => {
-    setAllBills(getBills());
-  }, []);
 
   useEffect(() => {
     const checkDueBills = () => {
       try {
         const now = new Date();
-        const upcomingDueBills = allBills.filter(
+        const upcomingDueBills = bills.filter(
           (bill) => !bill.isPaid && parseISO(bill.dueDate) > now
         );
         if (upcomingDueBills.length > 0) {
@@ -59,7 +56,7 @@ export function BillAlarmManager() {
     checkDueBills(); // Initial check
 
     return () => clearInterval(interval);
-  }, [allBills]);
+  }, [bills]);
 
   useEffect(() => {
     if (dueBills.length > 0 && currentBillIndex < dueBills.length) {
@@ -96,10 +93,6 @@ export function BillAlarmManager() {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-  };
-  
-  const refreshBills = () => {
-    setAllBills(getBills());
   };
 
   const handleClose = () => {

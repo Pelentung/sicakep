@@ -1,27 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getFinancialSummary, getTransactions } from '@/lib/data';
+import { useState } from 'react';
 import { SummaryCards } from '@/components/dashboard/summary-cards';
 import { OverviewChart } from '@/components/dashboard/overview-chart';
 import { UpcomingBills } from '@/components/dashboard/upcoming-bills';
 import { AiInsights } from '@/components/dashboard/ai-insights';
 import { MonthPicker } from '@/components/month-picker';
 import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
-import type { Transaction } from '@/lib/types';
 import { LoaderCircle } from 'lucide-react';
+import { useData } from '@/context/data-context';
+import { getFinancialSummary } from '@/lib/data';
 
 export default function DashboardPage() {
+  const { transactions, loading } = useData();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [transactionsLoading, setTransactionsLoading] = useState(true);
 
-  useEffect(() => {
-    setAllTransactions(getTransactions());
-    setTransactionsLoading(false);
-  }, []);
-
-  const filteredTransactions = allTransactions.filter((t) => {
+  const filteredTransactions = transactions.filter((t) => {
     const transactionDate = parseISO(t.date);
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
@@ -30,7 +24,7 @@ export default function DashboardPage() {
 
   const summary = getFinancialSummary(filteredTransactions);
   
-  if (transactionsLoading) {
+  if (loading) {
      return <div className="flex h-full w-full items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>;
   }
 
@@ -44,7 +38,7 @@ export default function DashboardPage() {
       </div>
       <SummaryCards summary={summary} />
       <div className="grid gap-6 lg:grid-cols-2">
-        <OverviewChart transactions={allTransactions || []} selectedMonth={currentMonth} />
+        <OverviewChart transactions={transactions} selectedMonth={currentMonth} />
         <div className="space-y-6">
           <UpcomingBills />
           <AiInsights selectedMonth={currentMonth} />

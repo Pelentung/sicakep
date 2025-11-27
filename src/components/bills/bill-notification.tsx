@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bell } from 'lucide-react';
 import { isPast, parseISO } from 'date-fns';
-import { getBills } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -13,24 +12,20 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { Bill } from '@/lib/types';
+import { useData } from '@/context/data-context';
 
 
 export function BillNotification() {
-  const [unpaidBills, setUnpaidBills] = useState<Bill[]>([]);
+  const { bills } = useData();
   const [hasDueBills, setHasDueBills] = useState(false);
 
   useEffect(() => {
-    const bills = getBills();
     const unpaid = bills.filter(bill => !bill.isPaid);
-    setUnpaidBills(unpaid);
-  }, []);
-
-  useEffect(() => {
-    if (unpaidBills) {
-      const due = unpaidBills.some(bill => isPast(parseISO(bill.dueDate)));
+    if (unpaid) {
+      const due = unpaid.some(bill => isPast(parseISO(bill.dueDate)));
       setHasDueBills(due);
     }
-  }, [unpaidBills]);
+  }, [bills]);
 
 
   if (!hasDueBills) {

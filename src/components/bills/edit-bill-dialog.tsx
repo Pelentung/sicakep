@@ -30,16 +30,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { deleteBill, updateBill } from '@/lib/data';
 import type { Bill } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
+import { useData } from '@/context/data-context';
 
 interface EditBillDialogProps {
   bill: Bill;
-  onUpdate: () => void;
+  onUpdate: () => void; // onUpdate is now just for refreshing the list display if needed after an action
 }
 
 export function EditBillDialog({ bill, onUpdate }: EditBillDialogProps) {
+  const { updateBill, deleteBill } = useData();
   const [open, setOpen] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [name, setName] = useState(bill.name);
@@ -64,7 +65,7 @@ export function EditBillDialog({ bill, onUpdate }: EditBillDialogProps) {
       description: 'Tagihan telah diperbarui.',
     });
     setOpen(false);
-    onUpdate();
+    // No need to call onUpdate, context handles state
   };
 
   const handleDelete = () => {
@@ -74,7 +75,7 @@ export function EditBillDialog({ bill, onUpdate }: EditBillDialogProps) {
       description: 'Tagihan telah dihapus.',
     });
     setShowDeleteAlert(false);
-    onUpdate();
+    // No need to call onUpdate, context handles state
   };
 
   return (

@@ -8,12 +8,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
-import { deleteBudget, updateBudget } from "@/lib/data"
 import { useToast } from "@/hooks/use-toast"
 import { MoreHorizontal, Trash2 } from "lucide-react"
 import type { Budget } from "@/lib/types"
@@ -33,6 +31,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useData } from "@/context/data-context"
 
 interface EditBudgetDialogProps {
     budget: Budget;
@@ -40,6 +39,7 @@ interface EditBudgetDialogProps {
 }
 
 export function EditBudgetDialog({ budget, onUpdate }: EditBudgetDialogProps) {
+    const { updateBudget, deleteBudget } = useData();
     const [open, setOpen] = useState(false);
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
     const [amount, setAmount] = useState(budget.amount.toString());
@@ -61,7 +61,6 @@ export function EditBudgetDialog({ budget, onUpdate }: EditBudgetDialogProps) {
             description: `Anggaran untuk ${budget.category} telah diperbarui.`,
         });
         setOpen(false);
-        onUpdate();
     };
     
     const handleDelete = () => {
@@ -71,7 +70,6 @@ export function EditBudgetDialog({ budget, onUpdate }: EditBudgetDialogProps) {
             description: `Anggaran untuk ${budget.category} telah dihapus.`,
         });
         setShowDeleteAlert(false);
-        onUpdate();
     }
 
     return (
