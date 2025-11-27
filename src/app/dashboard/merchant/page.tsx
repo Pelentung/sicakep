@@ -1,17 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import type { Merchant } from '@/lib/merchant-data';
 import { merchants } from '@/lib/merchant-data';
 import { MerchantCard } from '@/components/merchant/merchant-card';
 import { MerchantTransactionDialog } from '@/components/merchant/merchant-transaction-dialog';
-import { addTransaction, getTransactions } from '@/lib/data';
-import type { Transaction } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { handleMerchantTransactionAction } from '@/app/actions';
 
 export default function MerchantPage() {
   const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
   const handleMerchantClick = (merchant: Merchant) => {
@@ -27,22 +27,24 @@ export default function MerchantPage() {
   const handleTransaction = (amount: number, customerId: string) => {
     if (!selectedMerchant) return;
 
-    const transaction: Omit<Transaction, 'id' | 'userId'> = {
-      type: 'expense',
-      amount: amount,
-      category: selectedMerchant.category,
-      date: new Date().toISOString(),
-      description: `${selectedMerchant.name} - No: ${customerId}`,
-    };
+    startTransition(async () => {
+      // Di dunia nyata, userId akan didapat dari sesi otentikasi
+      const result = await handleMerchantTransactionAction('1', selectedMerchant, amount, customerId);
 
-    addTransaction(transaction);
-    
-    toast({
-        title: 'Transaksi Berhasil',
-        description: `Pembayaran ${selectedMerchant.name} sebesar ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)} telah berhasil.`,
+      if (result.success) {
+        toast({
+          title: 'Transaksi Berhasil',
+          description: result.message,
+        });
+        handleDialogClose();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Transaksi Gagal',
+          description: result.error,
+        });
+      }
     });
-
-    handleDialogClose();
   };
 
   return (
@@ -66,6 +68,7 @@ export default function MerchantPage() {
           onClose={handleDialogClose}
           merchant={selectedMerchant}
           onConfirm={handleTransaction}
+          isPending={isPending}
         />
       )}
     </div>

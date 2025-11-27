@@ -14,12 +14,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Merchant } from '@/lib/merchant-data';
 import { useToast } from '@/hooks/use-toast';
+import { LoaderCircle } from 'lucide-react';
 
 interface MerchantTransactionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   merchant: Merchant;
   onConfirm: (amount: number, customerId: string) => void;
+  isPending: boolean;
 }
 
 export function MerchantTransactionDialog({
@@ -27,6 +29,7 @@ export function MerchantTransactionDialog({
   onClose,
   merchant,
   onConfirm,
+  isPending,
 }: MerchantTransactionDialogProps) {
   const [customerId, setCustomerId] = useState('');
   const [amount, setAmount] = useState('');
@@ -42,13 +45,22 @@ export function MerchantTransactionDialog({
       return;
     }
     onConfirm(Number(amount), customerId);
-    // Reset state after confirm
-    setCustomerId('');
-    setAmount('');
+    // State tidak direset di sini agar dialog tidak "flash"
+    // Reset terjadi setelah transaksi sukses di komponen parent
   };
 
+  // Reset state saat dialog ditutup
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setCustomerId('');
+      setAmount('');
+      onClose();
+    }
+  };
+
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
@@ -66,6 +78,7 @@ export function MerchantTransactionDialog({
               placeholder={merchant.placeholder}
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
+              disabled={isPending}
             />
           </div>
           <div className="space-y-2">
@@ -76,14 +89,17 @@ export function MerchantTransactionDialog({
               placeholder="Rp 0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              disabled={isPending}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isPending}>
             Batal
           </Button>
-          <Button onClick={handleConfirm}>Lanjutkan</Button>
+          <Button onClick={handleConfirm} disabled={isPending}>
+            {isPending ? <LoaderCircle className="animate-spin" /> : 'Lanjutkan'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
