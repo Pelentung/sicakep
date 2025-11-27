@@ -19,7 +19,7 @@ import { CurrencyInput } from '../ui/currency-input';
 
 interface AddBillDialogProps {
   children: React.ReactNode;
-  onBillAdded: (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => Promise<void>;
+  onBillAdded: (bill: Omit<Bill, 'id' | 'isPaid'>) => Promise<void>;
 }
 
 export function AddBillDialog({ children, onBillAdded }: AddBillDialogProps) {

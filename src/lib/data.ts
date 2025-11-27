@@ -30,11 +30,10 @@ export const getTransactions = async (userId: string): Promise<Transaction[]> =>
     }
 };
 
-export const addTransaction = async (userId: string, transaction: Omit<Transaction, 'id' | 'userId'>): Promise<Transaction> => {
+export const addTransaction = async (userId: string, transaction: Omit<Transaction, 'id'>): Promise<void> => {
     const transactionCollection = collection(db, 'users', userId, 'transactions');
     try {
-        const docRef = await addDoc(transactionCollection, transaction);
-        return { id: docRef.id, userId, ...transaction };
+        await addDoc(transactionCollection, transaction);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
             const customError = new FirestorePermissionError(
@@ -68,11 +67,10 @@ export const getBudgets = async (userId: string): Promise<Budget[]> => {
     }
 };
 
-export const addBudget = async (userId: string, budget: Omit<Budget, 'id' | 'userId'>): Promise<Budget> => {
+export const addBudget = async (userId: string, budget: Omit<Budget, 'id'>): Promise<void> => {
     const budgetCollection = collection(db, 'users', userId, 'budgets');
     try {
-        const docRef = await addDoc(budgetCollection, budget);
-        return { id: docRef.id, userId, ...budget };
+        await addDoc(budgetCollection, budget);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
             const customError = new FirestorePermissionError(
@@ -141,11 +139,10 @@ export const getBills = async (userId: string): Promise<Bill[]> => {
     }
 };
 
-export const addBill = async (userId: string, bill: Omit<Bill, 'id' | 'userId'>): Promise<Bill> => {
+export const addBill = async (userId: string, bill: Omit<Bill, 'id'>): Promise<void> => {
     const billCollection = collection(db, 'users', userId, 'bills');
     try {
-        const docRef = await addDoc(billCollection, bill);
-        return { id: docRef.id, userId, ...bill };
+        await addDoc(billCollection, bill);
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
             const customError = new FirestorePermissionError(

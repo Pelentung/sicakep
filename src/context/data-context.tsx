@@ -22,17 +22,16 @@ interface DataContextType {
   budgets: Budget[];
   bills: Bill[];
   loading: boolean;
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
-  addBudget: (budget: Omit<Budget, 'id' | 'userId'>) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
+  addBudget: (budget: Omit<Budget, 'id'>) => Promise<void>;
   updateBudget: (id: string, newAmount: number) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
   refreshBudgets: () => void;
-  addBill: (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => Promise<void>;
-  updateBill: (id: string, updates: Partial<Omit<Bill, 'id' | 'userId'>>) => Promise<void>;
+  addBill: (bill: Omit<Bill, 'id' | 'isPaid'>) => Promise<void>;
+  updateBill: (id: string, updates: Partial<Omit<Bill, 'id'>>) => Promise<void>;
   deleteBill: (id: string) => Promise<void>;
   toggleBillPaidStatus: (id: string, currentStatus: boolean) => Promise<void>;
   refreshBills: () => void;
-  clearLocalData: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -53,53 +52,58 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) {
+      if (user) {
+        try {
+          setLoading(true);
+          const [transactionsData, budgetsData, billsData] = await Promise.all([
+            getTransactions(user.uid),
+            getBudgets(user.uid),
+            getBills(user.uid),
+          ]);
+          setTransactions(transactionsData);
+          setBudgets(budgetsData);
+          setBills(billsData);
+        } catch (error) {
+          console.error("Failed to fetch data:", error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // If there's no user, clear all data
         clearLocalData();
-        return;
-      }
-      
-      try {
-        setLoading(true);
-        const [transactionsData, budgetsData, billsData] = await Promise.all([
-          getTransactions(user.uid),
-          getBudgets(user.uid),
-          getBills(user.uid),
-        ]);
-        setTransactions(transactionsData);
-        setBudgets(budgetsData);
-        setBills(billsData);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchData();
   }, [user, clearLocalData]);
 
-  const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id' | 'userId'>) => {
+  const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
     if (!user) throw new Error("User not authenticated");
-    const newTransaction = await addTransactionApi(user.uid, transaction);
-    setTransactions(prev => [newTransaction, ...prev]);
+    // Optimistically update UI
+    const tempId = `temp_${Date.now()}`;
+    setTransactions(prev => [{ id: tempId, ...transaction }, ...prev]);
+    await addTransactionApi(user.uid, transaction);
+    // Optionally, you can refresh data from server to get the real ID, but optimistic is often enough
   }, [user]);
 
-  const addBudget = useCallback(async (budget: Omit<Budget, 'id' | 'userId'>) => {
+  const addBudget = useCallback(async (budget: Omit<Budget, 'id'>) => {
     if (!user) throw new Error("User not authenticated");
-    const newBudget = await addBudgetApi(user.uid, budget);
-    setBudgets(prev => [...prev, newBudget]);
+    // Optimistic update
+    const tempId = `temp_${Date.now()}`;
+    setBudgets(prev => [...prev, { id: tempId, ...budget }]);
+    await addBudgetApi(user.uid, budget);
   }, [user]);
 
   const updateBudget = useCallback(async (id: string, newAmount: number) => {
     if (!user) throw new Error("User not authenticated");
-    await updateBudgetApi(user.uid, id, newAmount);
     setBudgets(prev => prev.map(b => b.id === id ? { ...b, amount: newAmount } : b));
+    await updateBudgetApi(user.uid, id, newAmount);
   }, [user]);
 
   const deleteBudget = useCallback(async (id: string) => {
     if (!user) throw new Error("User not authenticated");
-    await deleteBudgetApi(user.uid, id);
     setBudgets(prev => prev.filter(b => b.id !== id));
+    await deleteBudgetApi(user.uid, id);
   }, [user]);
 
   const refreshBudgets = useCallback(async () => {
@@ -110,7 +114,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, [user]);
   
-  const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => {
+  const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'isPaid'>) => {
     if (!user) throw new Error("User not authenticated");
     
     const [year, month, day] = bill.dueDate.split('-').map(Number);
@@ -123,11 +127,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         dueDate: formatISO(dueDate),
     };
     
-    const newBill = await addBillApi(user.uid, newBillData);
-    setBills(prev => [...prev, newBill].sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+    const tempId = `temp_${Date.now()}`;
+    setBills(prev => [...prev, { id: tempId, ...newBillData }].sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+    await addBillApi(user.uid, newBillData);
   }, [user]);
 
-  const updateBill = useCallback(async (id: string, updates: Partial<Omit<Bill, 'id' | 'userId'>>) => {
+  const updateBill = useCallback(async (id: string, updates: Partial<Omit<Bill, 'id'>>) => {
       if (!user) throw new Error("User not authenticated");
       
       let finalUpdates: Partial<Bill> = { ...updates };
@@ -139,21 +144,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
         finalUpdates = { ...updates, dueDate: formatISO(dueDate) };
       }
 
-      await updateBillApi(user.uid, id, finalUpdates);
       setBills(prev => prev.map(b => b.id === id ? { ...b, ...finalUpdates } as Bill : b)
                           .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+      await updateBillApi(user.uid, id, finalUpdates);
   }, [user]);
 
   const deleteBill = useCallback(async (id: string) => {
       if (!user) throw new Error("User not authenticated");
-      await deleteBillApi(user.uid, id);
       setBills(prev => prev.filter(b => b.id !== id));
+      await deleteBillApi(user.uid, id);
   }, [user]);
 
   const toggleBillPaidStatus = useCallback(async (id: string, currentStatus: boolean) => {
       if (!user) throw new Error("User not authenticated");
       
       const newStatus = !currentStatus;
+      setBills(prev => prev.map(b => b.id === id ? { ...b, isPaid: newStatus } : b));
       await updateBillApi(user.uid, id, { isPaid: newStatus });
 
       const bill = bills.find(b => b.id === id);
@@ -169,7 +175,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         });
       }
       
-      setBills(prev => prev.map(b => b.id === id ? { ...b, isPaid: newStatus } : b));
   }, [bills, addTransaction, user]);
 
   const refreshBills = useCallback(async () => {
@@ -195,7 +200,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     deleteBill,
     toggleBillPaidStatus,
     refreshBills,
-    clearLocalData
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

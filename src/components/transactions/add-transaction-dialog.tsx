@@ -32,7 +32,7 @@ const incomeCategories = ["Gaji", "Freelance", "Investasi", "Lainnya"];
 const expenseCategories = ["Makanan", "Transportasi", "Sewa", "Hiburan", "Belanja", "Kesehatan", "Tagihan", "Lainnya"];
 
 interface AddTransactionDialogProps {
-    onTransactionAdded: (transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
+    onTransactionAdded: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
 }
 
 export function AddTransactionDialog({ onTransactionAdded }: AddTransactionDialogProps) {

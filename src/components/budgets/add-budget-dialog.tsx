@@ -27,7 +27,7 @@ import { CurrencyInput } from "../ui/currency-input"
 
 const expenseCategories = ["Makanan", "Transportasi", "Sewa", "Hiburan", "Belanja", "Kesehatan", "Tagihan", "Lainnya"];
 
-export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.ReactNode, onBudgetAdded: (budget: Omit<Budget, 'id' | 'userId'>) => Promise<void> }) {
+export function AddBudgetDialog({ children, onBudgetAdded }: { children: React.ReactNode, onBudgetAdded: (budget: Omit<Budget, 'id'>) => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('');
   const [amount, setAmount] = useState<number | undefined>(undefined);
