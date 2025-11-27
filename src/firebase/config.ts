@@ -6,7 +6,15 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-const firebaseConfig = {"apiKey":"API_KEY","authDomain":"PROJECT_ID.firebaseapp.com","projectId":"PROJECT_ID","storageBucket":"PROJECT_ID.appspot.com","messagingSenderId":"SENDER_ID","appId":"APP_ID","measurementId":"MEASUREMENT_ID"};
+const firebaseConfig = {
+  apiKey: "AIzaSyC6uBvwWieqIFYg35ZB_257HNHG2-fl1oI",
+  authDomain: "pelentung.firebaseapp.com",
+  projectId: "pelentung",
+  storageBucket: "pelentung.appspot.com",
+  messagingSenderId: "1033413513485",
+  appId: "1:1033413513485:web:8bb007b0b7a316ad4ee044",
+  measurementId: "G-N9NK0464VK"
+};
 
 // Initialize Firebase
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
