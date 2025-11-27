@@ -42,14 +42,15 @@ export default function WelcomePage() {
 
   // Redirect if user is already logged in
   useEffect(() => {
-    if (user && !isRegistering) {
-        if (!isRegistrationComplete && isWebAuthnSupported) {
-          // Stay on this page to prompt for fingerprint registration
-        } else {
-          router.replace('/dashboard');
-        }
+    if (user && !loading) {
+      // If user is logged in but hasn't completed fingerprint registration, they might see the prompt.
+      // Otherwise, redirect to dashboard.
+      if (isRegistrationComplete || !isWebAuthnSupported) {
+        router.replace('/dashboard');
+      }
     }
-  }, [user, isRegistrationComplete, isRegistering, router, isWebAuthnSupported]);
+  }, [user, loading, router, isRegistrationComplete, isWebAuthnSupported]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
