@@ -1,3 +1,5 @@
+'use client';
+
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, FirestoreError } from "firebase/firestore";
 import { db } from "./config";
 import { FirestorePermissionError, OperationType } from "./errors";
@@ -60,6 +62,7 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfileDa
       if (error instanceof FirestoreError && error.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError(OperationType.UPDATE, userDocRef, data));
       }
-      throw error;
+      // Do not re-throw the error here, let the emitter handle it.
+      // This will prevent the generic error from being caught by the UI.
     }
 };
