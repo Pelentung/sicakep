@@ -20,9 +20,10 @@ function formatCurrency(amount: number) {
 interface BudgetCardProps {
     budget: Budget;
     spent: number;
+    onUpdate: () => void;
 }
 
-export function BudgetCard({ budget, spent }: BudgetCardProps) {
+export function BudgetCard({ budget, spent, onUpdate }: BudgetCardProps) {
     const progress = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
     const remaining = budget.amount - spent;
 
@@ -33,7 +34,7 @@ export function BudgetCard({ budget, spent }: BudgetCardProps) {
                     <CardTitle>{budget.category}</CardTitle>
                     <CardDescription>Anggaran: {formatCurrency(budget.amount)}</CardDescription>
                 </div>
-                <EditBudgetDialog budget={budget} />
+                <EditBudgetDialog budget={budget} onUpdate={onUpdate} />
             </CardHeader>
             <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { toggleBillPaidStatus } from '@/lib/data';
+import { getBills, toggleBillPaidStatus } from '@/lib/data';
 import type { Bill } from '@/lib/types';
 import { isPast, parseISO, format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -14,10 +14,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { BellRing, Wallet, LoaderCircle } from 'lucide-react';
+import { BellRing, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('id-ID', {
@@ -28,25 +26,20 @@ function formatCurrency(amount: number) {
 }
 
 export function BillAlarmManager() {
-  const { user: authUser } = useUser();
-  const db = useFirestore();
   const { toast } = useToast();
   
-  const billsQuery = useMemoFirebase(() => {
-    if (!authUser) return null;
-    return collection(db, 'users', authUser.uid, 'bills');
-  }, [db, authUser]);
-
-  const { data: allBills } = useCollection<Bill>(billsQuery);
-
+  const [allBills, setAllBills] = useState<Bill[]>([]);
   const [dueBills, setDueBills] = useState<Bill[]>([]);
   const [currentBillIndex, setCurrentBillIndex] = useState(0);
   const [isAlarmActive, setIsAlarmActive] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
+    setAllBills(getBills());
+  }, []);
+
+  useEffect(() => {
     const checkDueBills = () => {
-      if (!allBills) return;
       try {
         const now = new Date();
         const upcomingDueBills = allBills.filter(
@@ -104,6 +97,10 @@ export function BillAlarmManager() {
       audioRef.current.currentTime = 0;
     }
   };
+  
+  const refreshBills = () => {
+    setAllBills(getBills());
+  };
 
   const handleClose = () => {
     stopAlarm();
@@ -118,8 +115,9 @@ export function BillAlarmManager() {
   
   const handleMarkAsPaid = () => {
     const bill = currentBill();
-    if (bill && authUser) {
-        toggleBillPaidStatus(db, authUser.uid, bill.id, bill.isPaid);
+    if (bill) {
+        toggleBillPaidStatus(bill.id, bill.isPaid);
+        refreshBills();
         toast({
             title: 'Tagihan Dibayar',
             description: `${bill.name} telah ditandai sebagai lunas.`,

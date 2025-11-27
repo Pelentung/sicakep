@@ -1,29 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { addTransaction, getTransactions } from '@/lib/data';
 import { AddTransactionDialog } from '@/components/transactions/add-transaction-dialog';
 import { TransactionsTable } from '@/components/transactions/transactions-table';
 import { MonthPicker } from '@/components/month-picker';
 import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import type { Transaction } from '@/lib/types';
 import { LoaderCircle } from 'lucide-react';
 
 export default function TransactionsPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const { user: authUser } = useUser();
-  const db = useFirestore();
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
 
-  const transactionsQuery = useMemoFirebase(() => {
-    if (!authUser) return null;
-    return collection(db, 'users', authUser.uid, 'transactions');
-  }, [db, authUser]);
+  useEffect(() => {
+    setAllTransactions(getTransactions());
+    setTransactionsLoading(false);
+  }, []);
 
-  const { data: allTransactions, isLoading: transactionsLoading } = useCollection<Transaction>(transactionsQuery);
-
-  const filteredTransactions = (allTransactions || []).filter((t) => {
+  const filteredTransactions = allTransactions.filter((t) => {
     const transactionDate = parseISO(t.date);
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
@@ -31,8 +27,8 @@ export default function TransactionsPage() {
   });
 
   const handleTransactionAdded = (transaction: Omit<Transaction, 'id' | 'userId'>) => {
-      if (!authUser) return;
-      addTransaction(db, authUser.uid, transaction);
+      addTransaction(transaction);
+      setAllTransactions(getTransactions());
   }
 
   if (transactionsLoading) {

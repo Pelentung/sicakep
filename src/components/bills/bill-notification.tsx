@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bell } from 'lucide-react';
 import { isPast, parseISO } from 'date-fns';
+import { getBills } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -11,26 +12,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
 import type { Bill } from '@/lib/types';
 
 
 export function BillNotification() {
-  const { user: authUser } = useUser();
-  const db = useFirestore();
-
-  const billsQuery = useMemoFirebase(() => {
-    if (!authUser) return null;
-    const q = query(
-      collection(db, 'users', authUser.uid, 'bills'),
-      where('isPaid', '==', false)
-    );
-    return q;
-  }, [db, authUser]);
-
-  const { data: unpaidBills } = useCollection<Bill>(billsQuery);
+  const [unpaidBills, setUnpaidBills] = useState<Bill[]>([]);
   const [hasDueBills, setHasDueBills] = useState(false);
+
+  useEffect(() => {
+    const bills = getBills();
+    const unpaid = bills.filter(bill => !bill.isPaid);
+    setUnpaidBills(unpaid);
+  }, []);
 
   useEffect(() => {
     if (unpaidBills) {

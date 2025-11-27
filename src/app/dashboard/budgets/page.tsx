@@ -1,33 +1,30 @@
 'use client'
 
-import { useState } from "react";
-import { getBudgets, getTransactions, addBudget, updateBudget, deleteBudget } from "@/lib/data";
+import { useState, useEffect } from "react";
+import { getBudgets, getTransactions, addBudget } from "@/lib/data";
 import { BudgetCard } from "@/components/budgets/budget-card";
 import { AddBudgetDialog } from "@/components/budgets/add-budget-dialog";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Budget, Transaction } from "@/lib/types";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from "firebase/firestore";
 import { LoaderCircle } from "lucide-react";
 
 export default function BudgetsPage() {
-    const { user: authUser } = useUser();
-    const db = useFirestore();
+    const [budgets, setBudgets] = useState<Budget[]>([]);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState(true);
+    
+    useEffect(() => {
+        setBudgets(getBudgets());
+        setTransactions(getTransactions());
+        setLoading(false);
+    }, []);
 
-    const budgetsQuery = useMemoFirebase(() => {
-        if (!authUser) return null;
-        return collection(db, 'users', authUser.uid, 'budgets');
-    }, [db, authUser]);
-    const { data: budgets, isLoading: budgetsLoading } = useCollection<Budget>(budgetsQuery);
+    const refreshBudgets = () => {
+        setBudgets(getBudgets());
+    }
 
-    const transactionsQuery = useMemoFirebase(() => {
-        if (!authUser) return null;
-        return collection(db, 'users', authUser.uid, 'transactions');
-    }, [db, authUser]);
-    const { data: transactions, isLoading: transactionsLoading } = useCollection<Transaction>(transactionsQuery);
-
-    const spendingByCategory = (transactions || [])
+    const spendingByCategory = transactions
         .filter(t => t.type === 'expense')
         .reduce((acc, t) => {
             if (!acc[t.category]) {
@@ -38,11 +35,11 @@ export default function BudgetsPage() {
         }, {} as Record<string, number>);
 
     const handleBudgetAdded = (budget: Omit<Budget, 'id' | 'userId'>) => {
-        if (!authUser) return;
-        addBudget(db, authUser.uid, budget);
+        addBudget(budget);
+        refreshBudgets();
     }
 
-    if (budgetsLoading || transactionsLoading) {
+    if (loading) {
         return <div className="flex h-full w-full items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>;
     }
 
@@ -58,15 +55,16 @@ export default function BudgetsPage() {
                 </AddBudgetDialog>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {(budgets || []).map(budget => (
+                {budgets.map(budget => (
                     <BudgetCard 
                         key={budget.id}
                         budget={budget}
                         spent={spendingByCategory[budget.category] || 0}
+                        onUpdate={refreshBudgets}
                     />
                 ))}
             </div>
-            {(budgets || []).length === 0 && (
+            {budgets.length === 0 && (
                 <div className="col-span-full p-8 text-center text-muted-foreground">
                     Belum ada anggaran yang dibuat.
                 </div>

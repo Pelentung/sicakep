@@ -1,16 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getFinancialSummary, getSpendingByCategory, getTransactions } from '@/lib/data';
 import { IncomeExpenseChart } from '@/components/reports/income-expense-chart';
 import { CategorySpendingChart } from '@/components/reports/category-spending-chart';
 import { MonthPicker } from '@/components/month-picker';
 import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { LoaderCircle } from 'lucide-react';
+import type { Transaction } from '@/lib/types';
 
 export default function ReportsPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const allTransactions = getTransactions();
+  useEffect(() => {
+    setAllTransactions(getTransactions());
+    setLoading(false);
+  }, []);
 
   const filteredTransactions = allTransactions.filter((t) => {
     const transactionDate = parseISO(t.date);
@@ -21,6 +28,10 @@ export default function ReportsPage() {
 
   const summary = getFinancialSummary(filteredTransactions);
   const spendingByCategory = getSpendingByCategory(filteredTransactions);
+
+  if (loading) {
+    return <div className="flex h-full w-full items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>;
+  }
 
   return (
     <div className="space-y-6">

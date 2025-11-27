@@ -33,15 +33,13 @@ import {
 import { deleteBill, updateBill } from '@/lib/data';
 import type { Bill } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
-import { useUser, useFirestore } from '@/firebase';
 
 interface EditBillDialogProps {
   bill: Bill;
+  onUpdate: () => void;
 }
 
-export function EditBillDialog({ bill }: EditBillDialogProps) {
-  const { user: authUser } = useUser();
-  const db = useFirestore();
+export function EditBillDialog({ bill, onUpdate }: EditBillDialogProps) {
   const [open, setOpen] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [name, setName] = useState(bill.name);
@@ -51,7 +49,7 @@ export function EditBillDialog({ bill }: EditBillDialogProps) {
   const { toast } = useToast();
 
   const handleUpdate = () => {
-    if (!name || !amount || !dueDate || !dueTime || !authUser) {
+    if (!name || !amount || !dueDate || !dueTime) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -60,22 +58,23 @@ export function EditBillDialog({ bill }: EditBillDialogProps) {
       return;
     }
 
-    updateBill(db, authUser.uid, bill.id, { name, amount: Number(amount), dueDate, dueTime });
+    updateBill(bill.id, { name, amount: Number(amount), dueDate, dueTime });
     toast({
       title: 'Sukses',
       description: 'Tagihan telah diperbarui.',
     });
     setOpen(false);
+    onUpdate();
   };
 
   const handleDelete = () => {
-    if (!authUser) return;
-    deleteBill(db, authUser.uid, bill.id);
+    deleteBill(bill.id);
     toast({
       title: 'Sukses',
       description: 'Tagihan telah dihapus.',
     });
     setShowDeleteAlert(false);
+    onUpdate();
   };
 
   return (

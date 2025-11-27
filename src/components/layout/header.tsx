@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { LogOut, Settings, User } from 'lucide-react';
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { Settings, User } from 'lucide-react';
 import type { UserProfile } from '@/lib/user-data';
+import { getUser } from '@/lib/user-data';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,28 +20,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Logo } from '../logo';
 import { BillNotification } from '../bills/bill-notification';
-import { useRouter } from 'next/navigation';
-import { signOut } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
 
 export function Header() {
   const isMobile = useIsMobile();
-  const { user: authUser, isUserLoading } = useUser();
-  const auth = useAuth();
-  const db = useFirestore();
-  const router = useRouter();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!db || !authUser) return null;
-    return doc(db, 'users', authUser.uid);
-  }, [db, authUser]);
-
-  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/login');
-  };
+  useEffect(() => {
+    const user = getUser();
+    setUserProfile(user);
+    setIsUserLoading(false);
+  }, []);
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
@@ -100,11 +89,6 @@ export function Header() {
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Keluar</span>
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

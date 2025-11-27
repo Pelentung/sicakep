@@ -1,136 +1,85 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  query,
-  updateDoc,
-  where,
-  type Firestore,
-} from 'firebase/firestore';
-import {
-  addDocumentNonBlocking,
-  deleteDocumentNonBlocking,
-  setDocumentNonBlocking,
-  updateDocumentNonBlocking,
-} from '@/firebase/non-blocking-updates';
-
 import { formatISO, parseISO } from 'date-fns';
 import type { Transaction, Budget, Bill, FinancialSummary } from './types';
+import transactionsData from '@/database/transactions.json';
+import budgetsData from '@/database/budgets.json';
+import billsData from '@/database/bills.json';
 
-// We now pass firestore and userId to all data functions.
-// This file will no longer hold state.
+// In-memory "database"
+let transactions: Transaction[] = transactionsData;
+let budgets: Budget[] = budgetsData;
+let bills: Bill[] = billsData;
 
-export const getTransactions = async (
-  db: Firestore,
-  userId: string
-): Promise<Transaction[]> => {
-  const transactionsCol = collection(db, 'users', userId, 'transactions');
-  const snapshot = await getDocs(transactionsCol);
-  return snapshot.docs.map(
-    (doc) => ({ ...doc.data(), id: doc.id } as Transaction)
-  );
+// We are not using a real database, so data changes are not persisted.
+// These functions simulate data fetching and manipulation.
+
+export const getTransactions = (): Transaction[] => {
+  return transactions;
 };
 
-export const getBudgets = async (
-  db: Firestore,
-  userId: string
-): Promise<Budget[]> => {
-  const budgetsCol = collection(db, 'users', userId, 'budgets');
-  const snapshot = await getDocs(budgetsCol);
-  return snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id } as Budget));
+export const getBudgets = (): Budget[] => {
+  return budgets;
 };
 
-export const getBills = async (
-  db: Firestore,
-  userId: string
-): Promise<Bill[]> => {
-  const billsCol = collection(db, 'users', userId, 'bills');
-  const snapshot = await getDocs(billsCol);
-  const bills = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id } as Bill));
+export const getBills = (): Bill[] => {
   return bills.sort((a,b) => parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime());
 };
 
-export const addTransaction = (
-  db: Firestore,
-  userId: string,
-  transaction: Omit<Transaction, 'id' | 'userId'>
-) => {
-  const transactionsCol = collection(db, 'users', userId, 'transactions');
-  addDocumentNonBlocking(transactionsCol, { ...transaction, userId });
+export const addTransaction = (transaction: Omit<Transaction, 'id' | 'userId'>) => {
+  const newId = (Math.max(...transactions.map(t => parseInt(t.id))) + 1).toString();
+  transactions.push({ ...transaction, id: newId, userId: '1' });
 };
 
-export const addBudget = (
-  db: Firestore,
-  userId: string,
-  budget: Omit<Budget, 'id' | 'userId'>
-) => {
-  const budgetsCol = collection(db, 'users', userId, 'budgets');
-  addDocumentNonBlocking(budgetsCol, { ...budget, userId });
+export const addBudget = (budget: Omit<Budget, 'id' | 'userId'>) => {
+    const newId = (Math.max(...budgets.map(b => parseInt(b.id))) + 1).toString();
+    budgets.push({ ...budget, id: newId, userId: '1' });
 };
 
-export const updateBudget = (
-  db: Firestore,
-  userId: string,
-  id: string,
-  newAmount: number
-) => {
-  const budgetDoc = doc(db, 'users', userId, 'budgets', id);
-  updateDocumentNonBlocking(budgetDoc, { amount: newAmount });
+export const updateBudget = (id: string, newAmount: number) => {
+    budgets = budgets.map(b => b.id === id ? { ...b, amount: newAmount } : b);
 };
 
-export const deleteBudget = (db: Firestore, userId: string, id: string) => {
-  const budgetDoc = doc(db, 'users', userId, 'budgets', id);
-  deleteDocumentNonBlocking(budgetDoc);
+export const deleteBudget = (id: string) => {
+    budgets = budgets.filter(b => b.id !== id);
 };
 
-export const addBill = (
-  db: Firestore,
-  userId: string,
-  bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>
-) => {
-  const [year, month, day] = bill.dueDate.split('-').map(Number);
-  const [hours, minutes] = bill.dueTime.split(':').map(Number);
-  const dueDate = new Date(year, month - 1, day, hours, minutes);
+export const addBill = (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => {
+    const newId = (Math.max(...bills.map(b => parseInt(b.id))) + 1).toString();
+    const [year, month, day] = bill.dueDate.split('-').map(Number);
+    const [hours, minutes] = bill.dueTime.split(':').map(Number);
+    const dueDate = new Date(year, month - 1, day, hours, minutes);
 
-  const newBill: Omit<Bill, 'id'> = {
-    ...bill,
-    isPaid: false,
-    dueDate: formatISO(dueDate),
-    userId,
-  };
-  const billsCol = collection(db, 'users', userId, 'bills');
-  addDocumentNonBlocking(billsCol, newBill);
+    const newBill: Bill = {
+        ...bill,
+        id: newId,
+        isPaid: false,
+        dueDate: formatISO(dueDate),
+        userId: '1'
+    };
+    bills.push(newBill);
 };
 
-export const updateBill = (
-  db: Firestore,
-  userId: string,
-  id: string,
-  updates: Omit<Bill, 'id' | 'isPaid' | 'userId'>
-) => {
-  const billDoc = doc(db, 'users', userId, 'bills', id);
-  const [year, month, day] = updates.dueDate.split('-').map(Number);
-  const [hours, minutes] = updates.dueTime.split(':').map(Number);
-  const dueDate = new Date(year, month - 1, day, hours, minutes);
-
-  updateDocumentNonBlocking(billDoc, { ...updates, dueDate: formatISO(dueDate) });
+export const updateBill = (id: string, updates: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => {
+    bills = bills.map(b => {
+        if (b.id === id) {
+            const [year, month, day] = updates.dueDate.split('-').map(Number);
+            const [hours, minutes] = updates.dueTime.split(':').map(Number);
+            const dueDate = new Date(year, month - 1, day, hours, minutes);
+            return { ...b, ...updates, dueDate: formatISO(dueDate) };
+        }
+        return b;
+    });
 };
 
-export const deleteBill = (db: Firestore, userId: string, id: string) => {
-  const billDoc = doc(db, 'users', userId, 'bills', id);
-  deleteDocumentNonBlocking(billDoc);
+export const deleteBill = (id: string) => {
+    bills = bills.filter(b => b.id !== id);
 };
 
-export const toggleBillPaidStatus = (db: Firestore, userId: string, id: string, currentStatus: boolean) => {
-  const billDoc = doc(db, 'users', userId, 'bills', id);
-  updateDocumentNonBlocking(billDoc, { isPaid: !currentStatus });
+export const toggleBillPaidStatus = (id: string, currentStatus: boolean) => {
+    bills = bills.map(b => b.id === id ? { ...b, isPaid: !currentStatus } : b);
 };
 
-export const getFinancialSummary = (
-  transactions: Transaction[]
-): FinancialSummary => {
+
+export const getFinancialSummary = (transactions: Transaction[]): FinancialSummary => {
   const totalIncome = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
@@ -141,9 +90,7 @@ export const getFinancialSummary = (
   return { totalIncome, totalExpenses, balance };
 };
 
-export const getSpendingByCategory = (
-  transactions: Transaction[]
-): Record<string, number> => {
+export const getSpendingByCategory = (transactions: Transaction[]): Record<string, number> => {
   return transactions
     .filter((t) => t.type === 'expense')
     .reduce((acc, t) => {

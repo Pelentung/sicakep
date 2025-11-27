@@ -1,0 +1,7 @@
+[
+    { "id": "1", "type": "income", "amount": 5000000, "category": "Gaji", "date": "2024-07-01T00:00:00.000Z", "description": "Gaji bulanan", "userId": "1" },
+    { "id": "2", "type": "expense", "amount": 50000, "category": "Makanan", "date": "2024-07-03T00:00:00.000Z", "description": "Makan siang", "userId": "1" },
+    { "id": "3", "type": "expense", "amount": 25000, "category": "Transportasi", "date": "2024-07-03T00:00:00.000Z", "description": "Transportasi umum", "userId": "1" },
+    { "id": "4", "type": "expense", "amount": 150000, "category": "Hiburan", "date": "2024-07-05T00:00:00.000Z", "description": "Tiket bioskop", "userId": "1" },
+    { "id": "5", "type": "expense", "amount": 300000, "category": "Belanja", "date": "2024-06-20T00:00:00.000Z", "description": "Baju baru", "userId": "1" }
+]

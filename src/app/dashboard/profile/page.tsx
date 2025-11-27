@@ -8,21 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { getUser, updateUser, type UserProfile } from '@/lib/user-data';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { User as UserIcon, LoaderCircle } from 'lucide-react';
-import { doc } from 'firebase/firestore';
 
 export default function ProfilePage() {
-  const { user: authUser, isUserLoading } = useUser();
-  const db = useFirestore();
   const { toast } = useToast();
   
-  const userDocRef = useMemoFirebase(() => {
-    if (!db || !authUser) return null;
-    return doc(db, 'users', authUser.uid);
-  }, [db, authUser]);
-
-  const { data: user, isLoading: isProfileLoading, error } = useDoc<UserProfile>(userDocRef);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -31,13 +23,16 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (user) {
-      setName(user.name || '');
-      setEmail(user.email || '');
-      setPhone(user.phone || '');
-      setAvatarPreview(user.avatar || null);
+    const userData = getUser();
+    setUser(userData);
+    if (userData) {
+      setName(userData.name || '');
+      setEmail(userData.email || '');
+      setPhone(userData.phone || '');
+      setAvatarPreview(userData.avatar || null);
     }
-  }, [user]);
+    setLoading(false);
+  }, []);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -57,28 +52,25 @@ export default function ProfilePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!authUser) return;
+    if (!user) return;
 
-    const updatedProfile: Partial<UserProfile> = {
+    const updatedProfile: UserProfile = {
+        ...user,
         name,
         email,
         phone,
         avatar: avatarPreview || '',
     };
 
-    updateUser(db, authUser.uid, updatedProfile);
+    updateUser(updatedProfile);
     toast({
       title: 'Profil Diperbarui',
       description: 'Informasi profil Anda telah berhasil disimpan.',
     });
   };
 
-  if (isUserLoading || isProfileLoading) {
+  if (loading) {
     return <div className="flex h-full w-full items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>;
-  }
-  
-  if (error) {
-    return <div className="text-red-500">Error: {error.message}</div>
   }
 
   return (

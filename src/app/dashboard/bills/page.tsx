@@ -1,37 +1,37 @@
 'use client';
 
-import { useState } from 'react';
-import { addBill, toggleBillPaidStatus } from '@/lib/data';
+import { useState, useEffect } from 'react';
+import { getBills, addBill, toggleBillPaidStatus } from '@/lib/data';
 import type { Bill } from '@/lib/types';
 import { AddBillDialog } from '@/components/bills/add-bill-dialog';
 import { BillList } from '@/components/bills/bill-list';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, LoaderCircle } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
 
 export default function BillsPage() {
-  const { user: authUser } = useUser();
-  const db = useFirestore();
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const billsQuery = useMemoFirebase(() => {
-    if (!authUser) return null;
-    return collection(db, 'users', authUser.uid, 'bills');
-  }, [db, authUser]);
+  useEffect(() => {
+    setBills(getBills());
+    setLoading(false);
+  }, []);
 
-  const { data: bills, isLoading: billsLoading } = useCollection<Bill>(billsQuery);
+  const refreshBills = () => {
+    setBills(getBills());
+  };
 
   const handleBillAdded = (bill: Omit<Bill, 'id' | 'isPaid' | 'userId'>) => {
-    if (!authUser) return;
-    addBill(db, authUser.uid, bill);
+    addBill(bill);
+    refreshBills();
   };
 
   const handleTogglePaid = (id: string, currentStatus: boolean) => {
-    if (!authUser) return;
-    toggleBillPaidStatus(db, authUser.uid, id, currentStatus);
+    toggleBillPaidStatus(id, currentStatus);
+    refreshBills();
   };
 
-  if (billsLoading) {
+  if (loading) {
     return <div className="flex h-full w-full items-center justify-center"><LoaderCircle className="h-8 w-8 animate-spin" /></div>;
   }
 

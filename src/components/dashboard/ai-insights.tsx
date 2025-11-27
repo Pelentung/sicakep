@@ -6,24 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAIInsightsAction } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { useUser } from '@/firebase';
 
 export function AiInsights({ selectedMonth }: { selectedMonth: Date }) {
   const [isPending, startTransition] = useTransition();
   const [insights, setInsights] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useUser();
 
   const handleGetInsights = () => {
-    if (!user) {
-        setError("Anda harus login untuk mendapatkan wawasan.");
-        return;
-    }
-
+    // No user check needed for local db
     startTransition(async () => {
       setError(null);
       setInsights(null);
-      const result = await getAIInsightsAction(user.uid, selectedMonth);
+      // Assuming userId '1' for local data, as there's no auth
+      const result = await getAIInsightsAction('1', selectedMonth);
       if (result.success) {
         setInsights(result.insights);
       } else {
@@ -39,7 +34,7 @@ export function AiInsights({ selectedMonth }: { selectedMonth: Date }) {
           <Lightbulb className="h-5 w-5 text-accent" />
           Wawasan Belanja AI
         </CardTitle>
-        <Button onClick={handleGetInsights} disabled={isPending || !user} size="sm">
+        <Button onClick={handleGetInsights} disabled={isPending} size="sm">
           {isPending ? (
             <LoaderCircle className="animate-spin" />
           ) : (

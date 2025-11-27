@@ -3,20 +3,9 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import type { Bill } from '@/lib/types';
@@ -35,11 +24,13 @@ function formatCurrency(amount: number) {
 interface BillListProps {
   bills: Bill[];
   onTogglePaid: (id: string, currentStatus: boolean) => void;
+  onUpdate: () => void;
 }
 
 export function BillList({
   bills,
   onTogglePaid,
+  onUpdate,
 }: BillListProps) {
   const upcomingBills = bills.filter((b) => !b.isPaid);
   const paidBills = bills.filter((b) => b.isPaid);
@@ -50,12 +41,14 @@ export function BillList({
         title="Belum Dibayar"
         bills={upcomingBills}
         onTogglePaid={onTogglePaid}
+        onUpdate={onUpdate}
         emptyMessage="Tidak ada tagihan yang belum dibayar."
       />
       <BillSection
         title="Sudah Dibayar"
         bills={paidBills}
         onTogglePaid={onTogglePaid}
+        onUpdate={onUpdate}
         emptyMessage="Tidak ada tagihan yang sudah dibayar."
       />
     </div>
@@ -66,6 +59,7 @@ interface BillSectionProps {
   title: string;
   bills: Bill[];
   onTogglePaid: (id: string, currentStatus: boolean) => void;
+  onUpdate: () => void;
   emptyMessage: string;
 }
 
@@ -73,6 +67,7 @@ function BillSection({
   title,
   bills,
   onTogglePaid,
+  onUpdate,
   emptyMessage,
 }: BillSectionProps) {
   return (
@@ -126,7 +121,7 @@ function BillSection({
                 >
                   {formatCurrency(bill.amount)}
                 </div>
-                <EditBillDialog bill={bill} />
+                <EditBillDialog bill={bill} onUpdate={onUpdate}/>
               </div>
             ))}
           </div>

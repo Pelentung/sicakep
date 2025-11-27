@@ -8,24 +8,20 @@ import { UpcomingBills } from '@/components/dashboard/upcoming-bills';
 import { AiInsights } from '@/components/dashboard/ai-insights';
 import { MonthPicker } from '@/components/month-picker';
 import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import type { Transaction } from '@/lib/types';
 import { LoaderCircle } from 'lucide-react';
 
 export default function DashboardPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const { user: authUser } = useUser();
-  const db = useFirestore();
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
 
-  const transactionsQuery = useMemoFirebase(() => {
-    if (!authUser) return null;
-    return collection(db, 'users', authUser.uid, 'transactions');
-  }, [db, authUser]);
+  useEffect(() => {
+    setAllTransactions(getTransactions());
+    setTransactionsLoading(false);
+  }, []);
 
-  const { data: allTransactions, isLoading: transactionsLoading } = useCollection<Transaction>(transactionsQuery);
-
-  const filteredTransactions = (allTransactions || []).filter((t) => {
+  const filteredTransactions = allTransactions.filter((t) => {
     const transactionDate = parseISO(t.date);
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);

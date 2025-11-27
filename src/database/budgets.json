@@ -1,0 +1,5 @@
+[
+  { "id": "1", "category": "Makanan", "amount": 2000000, "userId": "1" },
+  { "id": "2", "category": "Transportasi", "amount": 500000, "userId": "1" },
+  { "id": "3", "category": "Hiburan", "amount": 750000, "userId": "1" }
+]

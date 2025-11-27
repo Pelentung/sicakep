@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { Bell, LoaderCircle } from "lucide-react";
 import {
@@ -11,9 +12,8 @@ import {
 } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
 import { id } from "date-fns/locale";
+import { getBills } from '@/lib/data';
 import { Button } from "../ui/button";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit, orderBy } from "firebase/firestore";
 import type { Bill } from "@/lib/types";
 
 function formatCurrency(amount: number) {
@@ -21,20 +21,18 @@ function formatCurrency(amount: number) {
 }
 
 export function UpcomingBills() {
-  const { user: authUser } = useUser();
-  const db = useFirestore();
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const billsQuery = useMemoFirebase(() => {
-    if (!authUser) return null;
-    return query(
-      collection(db, 'users', authUser.uid, 'bills'),
-      where('isPaid', '==', false),
-      orderBy('dueDate', 'asc'),
-      limit(3)
-    );
-  }, [db, authUser]);
-
-  const { data: bills, isLoading } = useCollection<Bill>(billsQuery);
+  useEffect(() => {
+      const allBills = getBills();
+      const upcoming = allBills
+          .filter(b => !b.isPaid)
+          .sort((a,b) => parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime())
+          .slice(0, 3);
+      setBills(upcoming);
+      setIsLoading(false);
+  }, []);
 
   return (
     <Card>
@@ -57,7 +55,7 @@ export function UpcomingBills() {
             <div className="flex justify-center items-center py-4">
                 <LoaderCircle className="h-6 w-6 animate-spin"/>
             </div>
-        ) : bills && bills.length > 0 ? (
+        ) : bills.length > 0 ? (
           <ul className="space-y-4">
             {bills.map((bill) => (
               <li key={bill.id} className="flex items-center justify-between">
