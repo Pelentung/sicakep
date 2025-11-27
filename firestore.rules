@@ -18,70 +18,43 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
-    /**
-     * Validates that the User document being created has an 'id' field
-     * matching the document's ID, ensuring path and data consistency.
-     */
-    function hasValidUserDataOnCreate(userId) {
-      return request.resource.data.id == userId;
-    }
     
-    /**
-     * Enforces immutability of the critical 'id' and 'email' fields in a User document.
-     */
-    function isUserDataImmutable() {
-      return request.resource.data.id == resource.data.id &&
-             request.resource.data.email == resource.data.email;
-    }
-
-    /**
-     * Validates that a subcollection document being created has a 'userId' field
-     * matching the parent user's ID, ensuring relational integrity.
-     */
-    function hasValidSubcollectionDataOnCreate(userId) {
-      return request.resource.data.userId == userId;
-    }
-
-    /**
-     * Enforces immutability of the 'userId' field in subcollection documents.
-     * This prevents documents from being reassigned to a different user.
-     */
-    function isSubcollectionDataImmutable() {
-      return request.resource.data.userId == resource.data.userId;
-    }
-
     /**
      * @description Manages user profile documents.
      * @path /users/{userId}
      */
     match /users/{userId} {
+      // Users can read and update their own profile.
       allow read, update: if isOwner(userId);
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow delete: if false; // Generally, users shouldn't delete their own accounts directly.
+      
+      // A new user can create their own profile.
+      allow create: if isOwner(userId);
+
+      // Users are not allowed to delete their own accounts through the app.
+      allow delete: if false;
 
       /**
-       * @description Manages a user's transactions (income and expenses).
-       * @path /users/{userId}/transactions/{transactionId}
+       * @description Manages a user's transactions.
+       * Users can perform any action on their own transactions.
        */
       match /transactions/{transactionId} {
-        allow read, write, list: if isOwner(userId);
+        allow read, write, create, update, delete, list: if isOwner(userId);
       }
 
       /**
-       * @description Manages a user's personal budget records.
-       * @path /users/{userId}/budgets/{budgetId}
+       * @description Manages a user's budgets.
+       * Users can perform any action on their own budgets.
        */
       match /budgets/{budgetId} {
-         allow read, write, list: if isOwner(userId);
+         allow read, write, create, update, delete, list: if isOwner(userId);
       }
 
       /**
-       * @description Manages a user's personal bill reminders.
-       * @path /users/{userId}/bills/{billId}
+       * @description Manages a user's bill reminders.
+       * Users can perform any action on their own bills.
        */
       match /bills/{billId} {
-         allow read, write, list: if isOwner(userId);
+         allow read, write, create, update, delete, list: if isOwner(userId);
       }
     }
   }
