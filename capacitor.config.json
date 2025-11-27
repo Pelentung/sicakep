@@ -1,0 +1,6 @@
+{
+  "appId": "com.sicakep.app",
+  "appName": "SICAKEP",
+  "webDir": "out",
+  "bundledWebRuntime": false
+}
