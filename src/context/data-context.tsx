@@ -65,7 +65,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             const collectionRef = collection(db, 'users', user.uid, collectionName);
             const q = orderByField 
                 ? query(collectionRef, orderBy(orderByField, orderByDirection))
-                : collectionRef;
+                : query(collectionRef);
             
             const unsubscribe = onSnapshot(q, 
                 (snapshot) => {
@@ -107,26 +107,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
     if (!user) throw new Error("User not authenticated");
     await addTransactionApi(user.uid, transaction);
+    // Real-time listener will update the state
   }, [user]);
 
   const addBudget = useCallback(async (budget: Omit<Budget, 'id'>) => {
     if (!user) throw new Error("User not authenticated");
     await addBudgetApi(user.uid, budget);
+    // Real-time listener will update the state
   }, [user]);
 
   const updateBudget = useCallback(async (id: string, newAmount: number) => {
     if (!user) throw new Error("User not authenticated");
     await updateBudgetApi(user.uid, id, newAmount);
+    // Real-time listener will update the state
   }, [user]);
 
   const deleteBudget = useCallback(async (id: string) => {
     if (!user) throw new Error("User not authenticated");
     await deleteBudgetApi(user.uid, id);
+    // Real-time listener will update the state
   }, [user]);
 
   const refreshBudgets = useCallback(async () => {
     // This function is no longer necessary due to real-time listeners,
-    // but kept for potential manual refresh triggers.
   }, []);
   
   const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'isPaid'>) => {
@@ -143,6 +146,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
     
     await addBillApi(user.uid, newBillData);
+    // Real-time listener will update the state
   }, [user]);
 
   const updateBill = useCallback(async (id: string, updates: Partial<Omit<Bill, 'id'>>) => {
@@ -150,19 +154,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
       
       let finalUpdates: Partial<Bill> = { ...updates };
 
-      if (updates.dueDate && 'dueTime' in updates) {
+      // Handle combined date/time update
+      if (updates.dueDate && 'dueTime' in updates && updates.dueTime) {
         const [year, month, day] = updates.dueDate.split('-').map(Number);
-        const [hours, minutes] = (updates.dueTime || '00:00').split(':').map(Number);
-        const dueDate = new Date(year, month - 1, day, hours, minutes);
-        finalUpdates = { ...updates, dueDate: formatISO(dueDate) };
+        const [hours, minutes] = updates.dueTime.split(':').map(Number);
+        const newDueDate = new Date(year, month - 1, day, hours, minutes);
+        finalUpdates.dueDate = formatISO(newDueDate);
       }
 
       await updateBillApi(user.uid, id, finalUpdates);
+      // Real-time listener will update the state
   }, [user]);
 
   const deleteBill = useCallback(async (id: string) => {
       if (!user) throw new Error("User not authenticated");
       await deleteBillApi(user.uid, id);
+      // Real-time listener will update the state
   }, [user]);
 
   const toggleBillPaidStatus = useCallback(async (id: string, currentStatus: boolean) => {
@@ -174,10 +181,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         console.error("Bill not found for toggling status");
         return;
     }
+    
+    // Optimistic update for UI responsiveness
+    setBills(prevBills => prevBills.map(b => b.id === id ? { ...b, isPaid: newStatus } : b));
 
     try {
         await updateBillApi(user.uid, id, { isPaid: newStatus });
 
+        // If marking as paid, add a corresponding transaction
         if (newStatus) {
             await addTransactionApi(user.uid, {
                 type: 'expense',
@@ -189,6 +200,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }
     } catch (error) {
         console.error("Failed to toggle bill status or add transaction:", error);
+        // Revert optimistic update on error
+        setBills(prevBills => prevBills.map(b => b.id === id ? { ...b, isPaid: currentStatus } : b));
     }
   }, [user, bills]);
 
