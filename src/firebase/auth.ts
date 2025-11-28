@@ -4,7 +4,8 @@ import {
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
     signOut,
-    updateProfile
+    updateProfile,
+    AuthError
 } from "firebase/auth";
 import { auth, db } from "./config";
 import { doc, setDoc, serverTimestamp, FirestoreError } from "firebase/firestore";
@@ -22,7 +23,14 @@ export const signUp = async (email: string, password: string, displayName: strin
     const user = userCredential.user;
 
     // Update Firebase Auth profile
-    await updateProfile(user, { displayName });
+    try {
+        await updateProfile(user, { displayName });
+    } catch (error) {
+        // Handle potential errors from updateProfile, though permission errors are less common here
+        console.error("Error updating Auth profile:", error);
+        // We can choose to throw or handle it gracefully
+    }
+    
 
     // Create user document in Firestore
     const userDocRef = doc(db, 'users', user.uid);
