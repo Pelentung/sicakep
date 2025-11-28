@@ -1,6 +1,0 @@
-[
-  { "id": "1", "name": "Tagihan Internet", "amount": 500000, "dueDate": "2024-07-28T10:00:00.000Z", "dueTime": "10:00", "isPaid": false, "userId": "1" },
-  { "id": "2", "name": "Langganan Streaming", "amount": 150000, "dueDate": "2024-08-05T12:00:00.000Z", "dueTime": "12:00", "isPaid": false, "userId": "1" },
-  { "id": "3", "name": "Cicilan", "amount": 2500000, "dueDate": "2024-08-10T09:00:00.000Z", "dueTime": "09:00", "isPaid": false, "userId": "1" },
-  { "id": "4", "name": "Tagihan Listrik", "amount": 750000, "dueDate": "2024-07-15T18:00:00.000Z", "dueTime": "18:00", "isPaid": true, "userId": "1" }
-]
