@@ -50,8 +50,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setLoading(true);
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const refreshAllData = useCallback(async () => {
       if (user) {
         try {
           setLoading(true);
@@ -69,29 +68,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         }
       } else {
-        // If there's no user, clear all data
         clearLocalData();
       }
-    };
-
-    fetchData();
   }, [user, clearLocalData]);
+
+  useEffect(() => {
+    refreshAllData();
+  }, [user, refreshAllData]);
 
   const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
     if (!user) throw new Error("User not authenticated");
-    // Optimistically update UI
     const tempId = `temp_${Date.now()}`;
     setTransactions(prev => [{ id: tempId, ...transaction }, ...prev]);
-    await addTransactionApi(user.uid, transaction);
-    // Optionally, you can refresh data from server to get the real ID, but optimistic is often enough
+    const newTransaction = await addTransactionApi(user.uid, transaction);
+    if (newTransaction) {
+        setTransactions(prev => prev.map(t => t.id === tempId ? newTransaction : t));
+    } else {
+        // If the API call failed, remove the optimistic update
+        setTransactions(prev => prev.filter(t => t.id !== tempId));
+    }
   }, [user]);
 
   const addBudget = useCallback(async (budget: Omit<Budget, 'id'>) => {
     if (!user) throw new Error("User not authenticated");
-    // Optimistic update
     const tempId = `temp_${Date.now()}`;
     setBudgets(prev => [...prev, { id: tempId, ...budget }]);
-    await addBudgetApi(user.uid, budget);
+    const newBudget = await addBudgetApi(user.uid, budget);
+    if (newBudget) {
+        setBudgets(prev => prev.map(b => b.id === tempId ? newBudget : b));
+    } else {
+        setBudgets(prev => prev.filter(b => b.id !== tempId));
+    }
   }, [user]);
 
   const updateBudget = useCallback(async (id: string, newAmount: number) => {
@@ -129,7 +136,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     
     const tempId = `temp_${Date.now()}`;
     setBills(prev => [...prev, { id: tempId, ...newBillData }].sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
-    await addBillApi(user.uid, newBillData);
+    
+    const newBill = await addBillApi(user.uid, newBillData);
+    if(newBill) {
+        setBills(prev => prev.map(b => b.id === tempId ? newBill : b).sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
+    } else {
+        setBills(prev => prev.filter(b => b.id !== tempId));
+    }
   }, [user]);
 
   const updateBill = useCallback(async (id: string, updates: Partial<Omit<Bill, 'id'>>) => {
@@ -156,26 +169,42 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const toggleBillPaidStatus = useCallback(async (id: string, currentStatus: boolean) => {
-      if (!user) throw new Error("User not authenticated");
-      
-      const newStatus = !currentStatus;
-      setBills(prev => prev.map(b => b.id === id ? { ...b, isPaid: newStatus } : b));
-      await updateBillApi(user.uid, id, { isPaid: newStatus });
+    if (!user) throw new Error("User not authenticated");
 
-      const bill = bills.find(b => b.id === id);
-      if (!bill) return;
+    const newStatus = !currentStatus;
+    const originalBills = bills;
 
-      if (newStatus) { // If marking as paid
-        await addTransaction({
-          type: 'expense',
-          amount: bill.amount,
-          category: 'Tagihan',
-          date: new Date().toISOString(),
-          description: bill.name,
-        });
-      }
-      
-  }, [bills, addTransaction, user]);
+    // Optimistic update for UI responsiveness
+    setBills(prev => prev.map(b => b.id === id ? { ...b, isPaid: newStatus } : b));
+
+    try {
+        await updateBillApi(user.uid, id, { isPaid: newStatus });
+
+        const bill = originalBills.find(b => b.id === id);
+        if (!bill) return;
+
+        if (newStatus) { // If marking as paid, add a transaction
+            await addTransaction({
+                type: 'expense',
+                amount: bill.amount,
+                category: 'Tagihan',
+                date: new Date().toISOString(),
+                description: `Pembayaran: ${bill.name}`,
+            });
+            // Refresh transactions to show the new payment
+            const transactionsData = await getTransactions(user.uid);
+            setTransactions(transactionsData);
+        } else {
+            // If marking as unpaid, you might want to find and remove the corresponding payment transaction.
+            // This is more complex and depends on the app's logic. For now, we'll just update the bill.
+        }
+    } catch (error) {
+        // If something fails, revert the optimistic update
+        setBills(originalBills);
+        console.error("Failed to toggle bill status or add transaction:", error);
+    }
+  }, [user, bills, addTransaction]);
+
 
   const refreshBills = useCallback(async () => {
     if (!user) return;

@@ -29,10 +29,11 @@ export const getTransactions = async (userId: string): Promise<Transaction[]> =>
     }
 };
 
-export const addTransaction = async (userId: string, transaction: Omit<Transaction, 'id'>): Promise<void> => {
+export const addTransaction = async (userId: string, transaction: Omit<Transaction, 'id'>): Promise<Transaction | null> => {
     const transactionCollection = collection(db, 'users', userId, 'transactions');
     try {
-        await addDoc(transactionCollection, transaction);
+        const docRef = await addDoc(transactionCollection, transaction);
+        return { id: docRef.id, ...transaction };
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -41,7 +42,7 @@ export const addTransaction = async (userId: string, transaction: Omit<Transacti
                 requestResourceData: transaction
             }));
         }
-        // Do not rethrow, let the emitter handle it.
+        return null;
     }
 };
 
@@ -64,10 +65,11 @@ export const getBudgets = async (userId: string): Promise<Budget[]> => {
     }
 };
 
-export const addBudget = async (userId: string, budget: Omit<Budget, 'id'>): Promise<void> => {
+export const addBudget = async (userId: string, budget: Omit<Budget, 'id'>): Promise<Budget | null> => {
     const budgetCollection = collection(db, 'users', userId, 'budgets');
     try {
-        await addDoc(budgetCollection, budget);
+        const docRef = await addDoc(budgetCollection, budget);
+        return { id: docRef.id, ...budget };
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
              errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -76,7 +78,7 @@ export const addBudget = async (userId: string, budget: Omit<Budget, 'id'>): Pro
                 requestResourceData: budget
              }));
         }
-        // Do not rethrow
+        return null;
     }
 };
 
@@ -133,10 +135,11 @@ export const getBills = async (userId: string): Promise<Bill[]> => {
     }
 };
 
-export const addBill = async (userId: string, bill: Omit<Bill, 'id'>): Promise<void> => {
+export const addBill = async (userId: string, bill: Omit<Bill, 'id'>): Promise<Bill | null> => {
     const billCollection = collection(db, 'users', userId, 'bills');
     try {
-        await addDoc(billCollection, bill);
+        const docRef = await addDoc(billCollection, bill);
+        return { id: docRef.id, ...bill };
     } catch (error) {
         if (error instanceof FirestoreError && error.code === 'permission-denied') {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -145,7 +148,7 @@ export const addBill = async (userId: string, bill: Omit<Bill, 'id'>): Promise<v
                 requestResourceData: bill
             }));
         }
-        // Do not rethrow
+        return null;
     }
 };
 
