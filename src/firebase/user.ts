@@ -72,5 +72,6 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfileDa
             requestResourceData: data,
         }));
       }
+      // Do not re-throw, let the emitter handle it.
     }
 };
