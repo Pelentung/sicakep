@@ -3,16 +3,13 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Transaction, Budget, Bill } from '@/lib/types';
 import { 
-    getTransactions,
     addTransaction as addTransactionApi,
-    getBudgets,
-    addBudget as addBudgetApi,
     updateBudget as updateBudgetApi,
     deleteBudget as deleteBudgetApi,
-    getBills,
     addBill as addBillApi,
     updateBill as updateBillApi,
     deleteBill as deleteBillApi,
+    addBudget as addBudgetApi,
 } from '@/lib/data';
 import { formatISO } from 'date-fns';
 import { useAuth } from './auth-context';
@@ -109,7 +106,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
     if (!user) throw new Error("User not authenticated");
-    // No more optimistic update needed with real-time listeners
     await addTransactionApi(user.uid, transaction);
   }, [user]);
 
@@ -129,12 +125,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const refreshBudgets = useCallback(async () => {
-    // This function is now less critical due to real-time listeners,
-    // but can be kept for manual refresh triggers if desired.
-    if (!user) return;
-    const budgetsData = await getBudgets(user.uid);
-    setBudgets(budgetsData);
-  }, [user]);
+    // This function is no longer necessary due to real-time listeners,
+    // but kept for potential manual refresh triggers.
+  }, []);
   
   const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'isPaid'>) => {
     if (!user) throw new Error("User not authenticated");
@@ -182,12 +175,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return;
     }
 
-    // Now, we don't need optimistic updates, just call the API.
-    // The listener will update the UI.
     try {
         await updateBillApi(user.uid, id, { isPaid: newStatus });
 
-        // If marking as paid, create the transaction.
         if (newStatus) {
             await addTransactionApi(user.uid, {
                 type: 'expense',
@@ -199,16 +189,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }
     } catch (error) {
         console.error("Failed to toggle bill status or add transaction:", error);
-        // We could add a toast here to inform the user of the failure.
     }
   }, [user, bills]);
 
 
   const refreshBills = useCallback(async () => {
-    if (!user) return;
-    const billsData = await getBills(user.uid);
-    setBills(billsData);
-  }, [user]);
+    // This function is no longer necessary due to real-time listeners.
+  }, []);
 
   const value = {
     transactions,
