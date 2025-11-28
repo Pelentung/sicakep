@@ -16,6 +16,10 @@ import {
 } from '@/lib/data';
 import { formatISO } from 'date-fns';
 import { useAuth } from './auth-context';
+import { db } from '@/firebase/config';
+import { collection, onSnapshot, query, orderBy, Unsubscribe, FirestoreError } from 'firebase/firestore';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/lib/events';
 
 interface DataContextType {
   transactions: Transaction[];
@@ -50,75 +54,86 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setLoading(true);
   }, []);
 
-  const refreshAllData = useCallback(async () => {
-      if (user) {
-        try {
-          setLoading(true);
-          const [transactionsData, budgetsData, billsData] = await Promise.all([
-            getTransactions(user.uid),
-            getBudgets(user.uid),
-            getBills(user.uid),
-          ]);
-          setTransactions(transactionsData);
-          setBudgets(budgetsData);
-          setBills(billsData);
-        } catch (error) {
-          console.error("Failed to fetch data:", error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        clearLocalData();
-      }
-  }, [user, clearLocalData]);
-
   useEffect(() => {
-    refreshAllData();
-  }, [user, refreshAllData]);
+    if (user) {
+        setLoading(true);
+        const unsubscribes: Unsubscribe[] = [];
+
+        const setupListener = <T extends { id: string }>(
+            collectionName: string,
+            setter: React.Dispatch<React.SetStateAction<T[]>>,
+            orderByField?: string,
+            orderByDirection: 'asc' | 'desc' = 'desc'
+        ) => {
+            const collectionRef = collection(db, 'users', user.uid, collectionName);
+            const q = orderByField 
+                ? query(collectionRef, orderBy(orderByField, orderByDirection))
+                : collectionRef;
+            
+            const unsubscribe = onSnapshot(q, 
+                (snapshot) => {
+                    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+                    setter(data);
+                    setLoading(false); // Set loading to false on first successful data load
+                }, 
+                (error) => {
+                    if (error instanceof FirestoreError && error.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({
+                            operation: 'list',
+                            path: collectionRef.path
+                        }));
+                    } else {
+                        console.error(`Error listening to ${collectionName}:`, error);
+                    }
+                    setLoading(false); // Also set loading to false on error
+                }
+            );
+            unsubscribes.push(unsubscribe);
+        };
+
+        setupListener<Transaction>('transactions', setTransactions, 'date', 'desc');
+        setupListener<Budget>('budgets', setBudgets, 'category', 'asc');
+        setupListener<Bill>('bills', setBills, 'dueDate', 'asc');
+
+        // Cleanup function to unsubscribe from all listeners on component unmount or user change
+        return () => {
+            unsubscribes.forEach(unsub => unsub());
+            clearLocalData();
+        };
+    } else {
+        // If there's no user, clear data and stop loading
+        clearLocalData();
+        setLoading(false);
+    }
+  }, [user, clearLocalData]);
 
   const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
     if (!user) throw new Error("User not authenticated");
-    const tempId = `temp_${Date.now()}`;
-    setTransactions(prev => [{ id: tempId, ...transaction }, ...prev]);
-    const newTransaction = await addTransactionApi(user.uid, transaction);
-    if (newTransaction) {
-        setTransactions(prev => prev.map(t => t.id === tempId ? newTransaction : t));
-    } else {
-        // If the API call failed, remove the optimistic update
-        setTransactions(prev => prev.filter(t => t.id !== tempId));
-    }
+    // No more optimistic update needed with real-time listeners
+    await addTransactionApi(user.uid, transaction);
   }, [user]);
 
   const addBudget = useCallback(async (budget: Omit<Budget, 'id'>) => {
     if (!user) throw new Error("User not authenticated");
-    const tempId = `temp_${Date.now()}`;
-    setBudgets(prev => [...prev, { id: tempId, ...budget }]);
-    const newBudget = await addBudgetApi(user.uid, budget);
-    if (newBudget) {
-        setBudgets(prev => prev.map(b => b.id === tempId ? newBudget : b));
-    } else {
-        setBudgets(prev => prev.filter(b => b.id !== tempId));
-    }
+    await addBudgetApi(user.uid, budget);
   }, [user]);
 
   const updateBudget = useCallback(async (id: string, newAmount: number) => {
     if (!user) throw new Error("User not authenticated");
-    setBudgets(prev => prev.map(b => b.id === id ? { ...b, amount: newAmount } : b));
     await updateBudgetApi(user.uid, id, newAmount);
   }, [user]);
 
   const deleteBudget = useCallback(async (id: string) => {
     if (!user) throw new Error("User not authenticated");
-    setBudgets(prev => prev.filter(b => b.id !== id));
     await deleteBudgetApi(user.uid, id);
   }, [user]);
 
   const refreshBudgets = useCallback(async () => {
+    // This function is now less critical due to real-time listeners,
+    // but can be kept for manual refresh triggers if desired.
     if (!user) return;
-    setLoading(true);
     const budgetsData = await getBudgets(user.uid);
     setBudgets(budgetsData);
-    setLoading(false);
   }, [user]);
   
   const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'isPaid'>) => {
@@ -134,15 +149,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         dueDate: formatISO(dueDate),
     };
     
-    const tempId = `temp_${Date.now()}`;
-    setBills(prev => [...prev, { id: tempId, ...newBillData }].sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
-    
-    const newBill = await addBillApi(user.uid, newBillData);
-    if(newBill) {
-        setBills(prev => prev.map(b => b.id === tempId ? newBill : b).sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
-    } else {
-        setBills(prev => prev.filter(b => b.id !== tempId));
-    }
+    await addBillApi(user.uid, newBillData);
   }, [user]);
 
   const updateBill = useCallback(async (id: string, updates: Partial<Omit<Bill, 'id'>>) => {
@@ -157,14 +164,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         finalUpdates = { ...updates, dueDate: formatISO(dueDate) };
       }
 
-      setBills(prev => prev.map(b => b.id === id ? { ...b, ...finalUpdates } as Bill : b)
-                          .sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()));
       await updateBillApi(user.uid, id, finalUpdates);
   }, [user]);
 
   const deleteBill = useCallback(async (id: string) => {
       if (!user) throw new Error("User not authenticated");
-      setBills(prev => prev.filter(b => b.id !== id));
       await deleteBillApi(user.uid, id);
   }, [user]);
 
@@ -172,46 +176,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!user) throw new Error("User not authenticated");
 
     const newStatus = !currentStatus;
-    const originalBills = bills;
+    const bill = bills.find(b => b.id === id);
+    if (!bill) {
+        console.error("Bill not found for toggling status");
+        return;
+    }
 
-    // Optimistic update for UI responsiveness
-    setBills(prev => prev.map(b => b.id === id ? { ...b, isPaid: newStatus } : b));
-
+    // Now, we don't need optimistic updates, just call the API.
+    // The listener will update the UI.
     try {
         await updateBillApi(user.uid, id, { isPaid: newStatus });
 
-        const bill = originalBills.find(b => b.id === id);
-        if (!bill) return;
-
-        if (newStatus) { // If marking as paid, add a transaction
-            await addTransaction({
+        // If marking as paid, create the transaction.
+        if (newStatus) {
+            await addTransactionApi(user.uid, {
                 type: 'expense',
                 amount: bill.amount,
                 category: 'Tagihan',
                 date: new Date().toISOString(),
                 description: `Pembayaran: ${bill.name}`,
             });
-            // Refresh transactions to show the new payment
-            const transactionsData = await getTransactions(user.uid);
-            setTransactions(transactionsData);
-        } else {
-            // If marking as unpaid, you might want to find and remove the corresponding payment transaction.
-            // This is more complex and depends on the app's logic. For now, we'll just update the bill.
         }
     } catch (error) {
-        // If something fails, revert the optimistic update
-        setBills(originalBills);
         console.error("Failed to toggle bill status or add transaction:", error);
+        // We could add a toast here to inform the user of the failure.
     }
-  }, [user, bills, addTransaction]);
+  }, [user, bills]);
 
 
   const refreshBills = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
     const billsData = await getBills(user.uid);
     setBills(billsData);
-    setLoading(false);
   }, [user]);
 
   const value = {
