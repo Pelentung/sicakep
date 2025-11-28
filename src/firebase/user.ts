@@ -33,7 +33,6 @@ export const createUserDocument = async (uid: string, email: string, displayName
       });
       errorEmitter.emit('permission-error', customError);
     }
-    throw error;
   }
   return userProfile;
 };
@@ -56,7 +55,6 @@ export const getUserProfile = async (uid: string): Promise<UserProfileData | nul
         path: userDocRef.path
       }));
     }
-    console.error("Error getting user profile:", error);
     return null;
   }
 };
@@ -73,9 +71,6 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfileDa
             path: userDocRef.path,
             requestResourceData: data,
         }));
-      } else {
-        // rethrow other errors
-        throw error;
       }
     }
 };
