@@ -14,10 +14,5 @@ service cloud.firestore {
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth.uid == userId;
     }
-    
-    // Default deny all other access
-    match /{document=**} {
-      allow read, write: if false;
-    }
   }
 }
