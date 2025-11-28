@@ -33,6 +33,7 @@ export const createUserDocument = async (uid: string, email: string, displayName
       });
       errorEmitter.emit('permission-error', customError);
     }
+    // Do not rethrow
   }
   return userProfile;
 };
