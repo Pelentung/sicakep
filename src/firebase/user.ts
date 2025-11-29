@@ -31,6 +31,8 @@ export const createUserDocument = async (uid: string, email: string, displayName
         requestResourceData: userProfile
       });
       errorEmitter.emit('permission-error', customError);
+    } else {
+        console.error("Error creating user document:", error);
     }
   });
 };
@@ -44,7 +46,7 @@ export const getUserProfile = async (uid: string): Promise<UserProfileData | nul
     if (docSnap.exists()) {
       return docSnap.data() as UserProfileData;
     } else {
-      console.log("No such document!");
+      console.warn("User profile document does not exist for uid:", uid);
       return null;
     }
   } catch (error) {

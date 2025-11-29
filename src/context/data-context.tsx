@@ -74,14 +74,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
                     setLoading(false); // Set loading to false on first successful data load
                 }, 
                 (error) => {
-                    if (error instanceof FirestoreError && error.code === 'permission-denied') {
-                        errorEmitter.emit('permission-error', new FirestorePermissionError({
-                            operation: 'list',
-                            path: collectionRef.path
-                        }));
-                    } else {
-                        console.error(`Error listening to ${collectionName}:`, error);
-                    }
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({
+                        operation: 'list',
+                        path: collectionRef.path
+                    }));
+                    console.error(`Error listening to ${collectionName}:`, error);
                     setLoading(false); // Also set loading to false on error
                 }
             );
