@@ -9,28 +9,18 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LoaderCircle, Wallet, Fingerprint } from 'lucide-react';
+import { LoaderCircle, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
-import { useWebAuthn } from '@/hooks/use-webauthn';
 
 export default function WelcomePage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, signUp, login, loading: authLoading } = useAuth();
-  const {
-    isWebAuthnSupported,
-    register: registerWebAuthn,
-    authenticate: authenticateWebAuthn,
-    isRegistrationComplete,
-    isAuthenticating,
-    isRegistering,
-  } = useWebAuthn();
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -38,18 +28,14 @@ export default function WelcomePage() {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   
-  const loading = authLoading || isAuthenticating || isRegistering;
+  const loading = authLoading;
 
   // Redirect if user is already logged in
   useEffect(() => {
     if (user && !loading) {
-      // If user is logged in but hasn't completed fingerprint registration, they might see the prompt.
-      // Otherwise, redirect to dashboard.
-      if (isRegistrationComplete || !isWebAuthnSupported) {
-        router.replace('/dashboard');
-      }
+      router.replace('/dashboard');
     }
-  }, [user, loading, router, isRegistrationComplete, isWebAuthnSupported]);
+  }, [user, loading, router]);
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -85,9 +71,9 @@ export default function WelcomePage() {
       await signUp(registerEmail, registerPassword, registerName);
       toast({
         title: 'Pendaftaran Berhasil',
-        description: 'Akun Anda telah dibuat. Silakan daftarkan sidik jari Anda.',
+        description: 'Akun Anda telah dibuat. Silakan login.',
       });
-      // Redirect is handled by useEffect, which will now show the registration prompt
+      // Redirect is handled by useEffect after login
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -96,45 +82,9 @@ export default function WelcomePage() {
       });
     }
   };
-  
-  const handleWebAuthnLogin = async () => {
-    try {
-      await authenticateWebAuthn();
-      toast({
-        title: 'Login Sidik Jari Berhasil',
-        description: 'Selamat datang kembali!',
-      });
-      router.push('/dashboard');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Login Sidik Jari Gagal',
-        description: error.message,
-      });
-    }
-  };
-  
-  const handleWebAuthnRegister = async () => {
-    if (user) {
-        try {
-            await registerWebAuthn(user.email!, user.displayName!);
-            toast({
-                title: 'Sidik Jari Terdaftar',
-                description: 'Anda sekarang dapat login menggunakan sidik jari.',
-            });
-            router.push('/dashboard');
-        } catch (error: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Pendaftaran Sidik Jari Gagal',
-                description: error.message,
-            });
-        }
-    }
-  };
 
   // Show a loading spinner while checking auth state, and before redirecting.
-  if (authLoading && !user) {
+  if (loading && !user) {
      return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
@@ -142,35 +92,6 @@ export default function WelcomePage() {
      );
   }
   
-  if (user && !isRegistrationComplete && isWebAuthnSupported) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle>Daftarkan Sidik Jari</CardTitle>
-            <CardDescription>
-              Aktifkan login cepat dan aman menggunakan sidik jari Anda.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center text-center">
-            <Fingerprint className="h-16 w-16 text-primary mb-4" />
-            <p className="text-muted-foreground">
-              Selesaikan penyiapan akun Anda dengan menambahkan sidik jari.
-            </p>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-2">
-            <Button className="w-full" onClick={handleWebAuthnRegister} disabled={loading}>
-              {loading ? <LoaderCircle className="animate-spin" /> : "Daftarkan Sidik Jari"}
-            </Button>
-            <Button variant="ghost" className="w-full" onClick={() => router.push('/dashboard')}>
-              Lewati untuk Sekarang
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="mb-8 flex items-center gap-2">
@@ -218,24 +139,6 @@ export default function WelcomePage() {
                 <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? <LoaderCircle className="animate-spin" /> : "Masuk"}
                 </Button>
-                {isWebAuthnSupported && (
-                    <>
-                        <div className="relative my-2">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-background px-2 text-muted-foreground">
-                                Atau
-                                </span>
-                            </div>
-                        </div>
-                        <Button variant="outline" type="button" className="w-full" onClick={handleWebAuthnLogin} disabled={loading}>
-                            {loading ? <LoaderCircle className="animate-spin" /> : <Fingerprint className="mr-2 h-4 w-4" />}
-                            Masuk dengan Sidik Jari
-                        </Button>
-                    </>
-                )}
               </CardContent>
             </form>
           </Card>

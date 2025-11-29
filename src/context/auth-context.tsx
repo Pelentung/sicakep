@@ -1,12 +1,10 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged, User, signInWithCustomToken } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 import { signUp as signUpApi, login as loginApi, logout as logoutApi } from '@/firebase/auth';
 import { getUserProfile, type UserProfileData } from '@/firebase/user';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/firebase/config';
 
 export interface UserData extends UserProfileData {
     uid: string;
@@ -20,7 +18,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  loginWithToken?: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,44 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      // onAuthStateChanged will handle setting the user state
   };
 
-  const loginWithToken = async (email: string) => {
-      // This is a mock for the prototype. In a real app, a secure server would generate this token.
-      setLoading(true);
-      try {
-          const usersRef = collection(db, 'users');
-          const q = query(usersRef, where("email", "==", email));
-          const querySnapshot = await getDocs(q);
-
-          if (querySnapshot.empty) {
-              throw new Error("User not found for WebAuthn login.");
-          }
-          const userDoc = querySnapshot.docs[0];
-          const uid = userDoc.id;
-
-          // MOCK: Create a fake token. THIS IS NOT A REAL FIREBASE TOKEN.
-          const fakeToken = `mock-token-for-uid-${uid}`;
-          
-          await signInWithCustomToken(auth, fakeToken).catch(async (err) => {
-              // This part will run because the token is fake.
-              // We manually simulate the login for the prototype.
-              console.warn("signInWithCustomToken failed as expected with mock token. Simulating login locally.");
-              const firebaseUser = { uid, email } as User; // A mock user object
-              const fullUserData = await fetchFullUserData(firebaseUser);
-              setUser(fullUserData);
-              setLoading(false);
-          });
-      } catch (error) {
-          setLoading(false);
-          throw error;
-      }
-  };
-
   const logout = async () => {
     await logoutApi();
     // onAuthStateChanged will set user to null
   };
 
-  const value: AuthContextType = { user, loading, signUp, login, logout, refreshUser, loginWithToken };
+  const value: AuthContextType = { user, loading, signUp, login, logout, refreshUser };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
