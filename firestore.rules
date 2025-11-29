@@ -9,18 +9,18 @@ service cloud.firestore {
     }
 
     match /users/{userId}/transactions/{transactionId} {
-      // Izinkan akses penuh ke transaksi hanya untuk pengguna pemilik.
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Izinkan akses penuh (termasuk list) ke transaksi hanya untuk pengguna pemilik.
+      allow list, read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /users/{userId}/budgets/{budgetId} {
-      // Izinkan akses penuh ke anggaran hanya untuk pengguna pemilik.
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Izinkan akses penuh (termasuk list) ke anggaran hanya untuk pengguna pemilik.
+      allow list, read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /users/{userId}/bills/{billId} {
-      // Izinkan akses penuh ke tagihan hanya untuk pengguna pemilik.
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Izinkan akses penuh (termasuk list) ke tagihan hanya untuk pengguna pemilik.
+      allow list, read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
