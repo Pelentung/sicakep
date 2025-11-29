@@ -60,7 +60,6 @@ export default function MerchantPage() {
 
     startTransition(async () => {
       const result = await handleMerchantTransactionAction(
-        user.uid,
         selectedMerchant,
         amount,
         customerId

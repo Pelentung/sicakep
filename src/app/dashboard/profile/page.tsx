@@ -7,13 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserProfile, type UserProfileData } from '@/firebase/user';
 import { User as UserIcon, LoaderCircle } from 'lucide-react';
-import { useAuth } from '@/context/auth-context';
+import { useAuth, type UserData } from '@/context/auth-context';
 
 export default function ProfilePage() {
   const { toast } = useToast();
-  const { user, loading: authLoading, refreshUser } = useAuth();
+  const { user, loading: authLoading, updateUser } = useAuth();
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -52,16 +51,13 @@ export default function ProfilePage() {
 
     setIsSaving(true);
     try {
-      const updatedProfile: Partial<UserProfileData> = {
+      const updatedProfile: Partial<UserData> = {
           displayName: name,
           phone,
-          // In a real app, you'd upload the avatarPreview to Firebase Storage first
-          // and get a URL. For now, we'll just save the data URL if it's new.
           photoURL: avatarPreview || user.photoURL || '',
       };
-
-      await updateUserProfile(user.uid, updatedProfile);
-      await refreshUser(); // Refresh user data in context
+      
+      await updateUser(updatedProfile);
 
       toast({
         title: 'Profil Diperbarui',

@@ -6,27 +6,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAIInsightsAction } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { useAuth } from '@/context/auth-context';
+import { useData } from '@/context/data-context';
 
 export function AiInsights({ selectedMonth }: { selectedMonth: Date }) {
   const [isPending, startTransition] = useTransition();
   const [insights, setInsights] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { transactions } = useData();
 
   const handleGetInsights = () => {
-    if (!user) {
-        setError("Anda harus login untuk mendapatkan wawasan.");
-        return;
-    }
-
     startTransition(async () => {
       setError(null);
       setInsights(null);
-      const result = await getAIInsightsAction(user.uid, selectedMonth);
-      if (result.success) {
+      const result = await getAIInsightsAction(transactions, selectedMonth);
+      if (result.success && result.insights) {
         setInsights(result.insights);
-      } else {
+      } else if(result.error) {
         setError(result.error);
       }
     });

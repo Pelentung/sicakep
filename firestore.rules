@@ -1,16 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Hanya pengguna dengan ID yang cocok ({userId}) yang dapat membaca/menulis
     match /users/{userId} {
-      // Allow user to read and update their own profile.
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      // Allow a new user to create their own profile document.
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if false
     }
-
-    match /users/{userId}/{collection}/{docId} {
-      // Allow full access to subcollections (transactions, budgets, bills) for the owner.
-      allow list, read, write: if request.auth != null && request.auth.uid == userId;
+    
+    // Untuk koleksi 'tasks' di bawah dokumen 'users'
+    match /users/{userId}/tasks/{taskId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
+

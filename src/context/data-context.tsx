@@ -2,21 +2,19 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Transaction, Budget, Bill } from '@/lib/types';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 import { 
-    addTransaction as addTransactionApi,
-    updateBudget as updateBudgetApi,
-    deleteBudget as deleteBudgetApi,
-    addBill as addBillApi,
-    updateBill as updateBillApi,
-    deleteBill as deleteBillApi,
-    addBudget as addBudgetApi,
+    addTransaction as addTransactionLocal,
+    updateBudget as updateBudgetLocal,
+    deleteBudget as deleteBudgetLocal,
+    addBill as addBillLocal,
+    updateBill as updateBillLocal,
+    deleteBill as deleteBillLocal,
+    addBudget as addBudgetLocal,
 } from '@/lib/data';
 import { formatISO } from 'date-fns';
 import { useAuth } from './auth-context';
-import { db } from '@/firebase/config';
-import { collection, onSnapshot, query, orderBy, Unsubscribe, FirestoreError } from 'firebase/firestore';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { errorEmitter } from '@/lib/events';
+import { v4 as uuidv4 } from 'uuid';
 
 interface DataContextType {
   transactions: Transaction[];
@@ -38,173 +36,98 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [bills, setBills] = useState<Bill[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  
+  const [transactions, setTransactions] = useLocalStorage<Transaction[]>('transactions', []);
+  const [budgets, setBudgets] = useLocalStorage<Budget[]>('budgets', []);
+  const [bills, setBills] = useLocalStorage<Bill[]>('bills', []);
   const [loading, setLoading] = useState(true);
 
-  const clearLocalData = useCallback(() => {
-    setTransactions([]);
-    setBudgets([]);
-    setBills([]);
-    setLoading(true);
-  }, []);
-
+  // When auth is done loading, data is also "done" loading from local storage
   useEffect(() => {
-    if (user) {
-        setLoading(true);
-        const unsubscribes: Unsubscribe[] = [];
-
-        const setupListener = <T extends { id: string }>(
-            collectionName: string,
-            setter: React.Dispatch<React.SetStateAction<T[]>>,
-            orderByField?: string,
-            orderByDirection: 'asc' | 'desc' = 'desc'
-        ) => {
-            const collectionRef = collection(db, 'users', user.uid, collectionName);
-            const q = orderByField 
-                ? query(collectionRef, orderBy(orderByField, orderByDirection))
-                : query(collectionRef);
-            
-            const unsubscribe = onSnapshot(q, 
-                (snapshot) => {
-                    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-                    setter(data);
-                    setLoading(false); // Set loading to false on first successful data load
-                }, 
-                (error) => {
-                    errorEmitter.emit('permission-error', new FirestorePermissionError({
-                        operation: 'list',
-                        path: collectionRef.path
-                    }));
-                    console.error(`Error listening to ${collectionName}:`, error);
-                    setLoading(false); // Also set loading to false on error
-                }
-            );
-            unsubscribes.push(unsubscribe);
-        };
-
-        setupListener<Transaction>('transactions', setTransactions, 'date', 'desc');
-        setupListener<Budget>('budgets', setBudgets, 'category', 'asc');
-        setupListener<Bill>('bills', setBills, 'dueDate', 'asc');
-
-        // Cleanup function to unsubscribe from all listeners on component unmount or user change
-        return () => {
-            unsubscribes.forEach(unsub => unsub());
-            clearLocalData();
-        };
-    } else {
-        // If there's no user, clear data and stop loading
-        clearLocalData();
-        setLoading(false);
+    if (!authLoading) {
+      setLoading(false);
     }
-  }, [user, clearLocalData]);
+  }, [authLoading]);
+  
+  // Clear data on logout
+  useEffect(() => {
+      if (!user && !authLoading) {
+          setTransactions([]);
+          setBudgets([]);
+          setBills([]);
+      }
+  }, [user, authLoading, setTransactions, setBudgets, setBills])
 
   const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
-    if (!user) throw new Error("User not authenticated");
-    await addTransactionApi(user.uid, transaction);
-    // Real-time listener will update the state
-  }, [user]);
+    const newTransaction = { ...transaction, id: uuidv4() };
+    addTransactionLocal(newTransaction, setTransactions);
+  }, [setTransactions]);
 
   const addBudget = useCallback(async (budget: Omit<Budget, 'id'>) => {
-    if (!user) throw new Error("User not authenticated");
-    await addBudgetApi(user.uid, budget);
-    // Real-time listener will update the state
-  }, [user]);
+    const newBudget = { ...budget, id: uuidv4() };
+    addBudgetLocal(newBudget, setBudgets);
+  }, [setBudgets]);
 
   const updateBudget = useCallback(async (id: string, newAmount: number) => {
-    if (!user) throw new Error("User not authenticated");
-    await updateBudgetApi(user.uid, id, newAmount);
-    // Real-time listener will update the state
-  }, [user]);
+    updateBudgetLocal(id, newAmount, setBudgets);
+  }, [setBudgets]);
 
   const deleteBudget = useCallback(async (id: string) => {
-    if (!user) throw new Error("User not authenticated");
-    await deleteBudgetApi(user.uid, id);
-    // Real-time listener will update the state
-  }, [user]);
+    deleteBudgetLocal(id, setBudgets);
+  }, [setBudgets]);
 
-  const refreshBudgets = useCallback(async () => {
-    // This function is no longer necessary due to real-time listeners,
+  const refreshBudgets = useCallback(() => {
+    // No-op for local storage, changes are instant
   }, []);
   
   const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'isPaid'>) => {
-    if (!user) throw new Error("User not authenticated");
-    
     const [year, month, day] = bill.dueDate.split('-').map(Number);
     const [hours, minutes] = bill.dueTime.split(':').map(Number);
     const dueDate = new Date(year, month - 1, day, hours, minutes);
 
-    const newBillData = {
+    const newBill = {
         ...bill,
+        id: uuidv4(),
         isPaid: false,
         dueDate: formatISO(dueDate),
     };
-    
-    await addBillApi(user.uid, newBillData);
-    // Real-time listener will update the state
-  }, [user]);
+    addBillLocal(newBill, setBills);
+  }, [setBills]);
 
   const updateBill = useCallback(async (id: string, updates: Partial<Omit<Bill, 'id'>>) => {
-      if (!user) throw new Error("User not authenticated");
-      
-      let finalUpdates: Partial<Bill> = { ...updates };
-
-      // Handle combined date/time update
-      if (updates.dueDate && 'dueTime' in updates && updates.dueTime) {
-        const [year, month, day] = updates.dueDate.split('-').map(Number);
-        const [hours, minutes] = updates.dueTime.split(':').map(Number);
-        const newDueDate = new Date(year, month - 1, day, hours, minutes);
-        finalUpdates.dueDate = formatISO(newDueDate);
-      }
-
-      await updateBillApi(user.uid, id, finalUpdates);
-      // Real-time listener will update the state
-  }, [user]);
+      updateBillLocal(id, updates, setBills);
+  }, [setBills]);
 
   const deleteBill = useCallback(async (id: string) => {
-      if (!user) throw new Error("User not authenticated");
-      await deleteBillApi(user.uid, id);
-      // Real-time listener will update the state
-  }, [user]);
+      deleteBillLocal(id, setBills);
+  }, [setBills]);
 
   const toggleBillPaidStatus = useCallback(async (id: string, currentStatus: boolean) => {
-    if (!user) throw new Error("User not authenticated");
+      const newStatus = !currentStatus;
+      const bill = bills.find(b => b.id === id);
+      
+      if (!bill) {
+          console.error("Bill not found for toggling");
+          return;
+      }
 
-    const newStatus = !currentStatus;
-    const bill = bills.find(b => b.id === id);
-    if (!bill) {
-        console.error("Bill not found for toggling status");
-        return;
-    }
-    
-    // Optimistic update for UI responsiveness
-    setBills(prevBills => prevBills.map(b => b.id === id ? { ...b, isPaid: newStatus } : b));
-
-    try {
-        await updateBillApi(user.uid, id, { isPaid: newStatus });
-
-        // If marking as paid, add a corresponding transaction
-        if (newStatus) {
-            await addTransactionApi(user.uid, {
-                type: 'expense',
-                amount: bill.amount,
-                category: 'Tagihan',
-                date: new Date().toISOString(),
-                description: `Pembayaran: ${bill.name}`,
-            });
-        }
-    } catch (error) {
-        console.error("Failed to toggle bill status or add transaction:", error);
-        // Revert optimistic update on error
-        setBills(prevBills => prevBills.map(b => b.id === id ? { ...b, isPaid: currentStatus } : b));
-    }
-  }, [user, bills]);
+      updateBillLocal(id, { isPaid: newStatus }, setBills);
+      
+      if (newStatus) { // If marking as paid
+          addTransaction({
+              type: 'expense',
+              amount: bill.amount,
+              category: 'Tagihan',
+              date: new Date().toISOString(),
+              description: `Pembayaran: ${bill.name}`,
+          })
+      }
+  }, [bills, setBills, addTransaction]);
 
 
   const refreshBills = useCallback(async () => {
-    // This function is no longer necessary due to real-time listeners.
+    // No-op for local storage
   }, []);
 
   const value = {

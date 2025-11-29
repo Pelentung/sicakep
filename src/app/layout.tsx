@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/auth-context';
 import { DataProvider } from '@/context/data-context';
-import { FirebaseErrorListener } from '@/components/firebase-error-listener';
 
 export const metadata: Metadata = {
   title: 'SICAKEP',
@@ -33,7 +32,6 @@ export default function RootLayout({
           <DataProvider>
             {children}
             <Toaster />
-            <FirebaseErrorListener />
           </DataProvider>
         </AuthProvider>
       </body>

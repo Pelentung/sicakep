@@ -1,14 +1,14 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/firebase/config';
-import { signUp as signUpApi, login as loginApi, logout as logoutApi } from '@/firebase/auth';
-import { getUserProfile, type UserProfileData } from '@/firebase/user';
+import { useLocalStorage } from '@/hooks/use-local-storage';
 
-export interface UserData extends UserProfileData {
+export interface UserData {
     uid: string;
     email: string | null;
+    displayName: string | null;
+    photoURL: string | null;
+    phone: string | null;
 }
 
 interface AuthContextType {
@@ -17,90 +17,90 @@ interface AuthContextType {
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  updateUser: (updates: Partial<UserData>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const FAKE_USERS_STORAGE_KEY = 'fake-users';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] = useLocalStorage<UserData | null>('auth-user', null);
+  const [fakeUsers, setFakeUsers] = useLocalStorage<Record<string, any>>(FAKE_USERS_STORAGE_KEY, {});
   const [loading, setLoading] = useState(true);
 
-  const fetchFullUserData = useCallback(async (firebaseUser: User): Promise<UserData> => {
-    // getUserProfile handles its own permission errors
-    const profileData = await getUserProfile(firebaseUser.uid);
-    
-    // Fallback if firestore doc doesn't exist or fails to fetch
-    return {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: profileData?.displayName || firebaseUser.displayName || 'No Name',
-        photoURL: profileData?.photoURL || firebaseUser.photoURL || '',
-        phone: profileData?.phone || firebaseUser.phoneNumber || ''
-    };
+  useEffect(() => {
+    // Simulate initial auth check
+    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-            const fullUserData = await fetchFullUserData(firebaseUser);
-            setUser(fullUserData);
-        } catch (error) {
-            console.error("Failed to fetch user profile after auth state change:", error);
-            // Don't set user to null, but maybe a state with an error
-            // For now, we set a minimal user object to avoid breaking the UI completely
-            setUser({ 
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                displayName: 'Error Loading Profile',
-                photoURL: firebaseUser.photoURL || '',
-                phone: ''
-            });
+  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
+    return new Promise<void>((resolve, reject) => {
+      setTimeout(() => {
+        if (fakeUsers[email]) {
+          reject(new Error("Email sudah digunakan."));
+        } else {
+          setFakeUsers(prev => ({
+            ...prev,
+            [email]: { email, password, displayName, photoURL: '', phone: '' }
+          }));
+          resolve();
         }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
+      }, 500);
     });
+  }, [fakeUsers, setFakeUsers]);
 
-    return () => unsubscribe();
-  }, [fetchFullUserData]);
-  
-  const refreshUser = useCallback(async () => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-        setLoading(true);
-        try {
-            const fullUserData = await fetchFullUserData(currentUser);
-            setUser(fullUserData);
-        } catch (error) {
-            console.error("Failed to refresh user:", error);
-        } finally {
-            setLoading(false);
+  const login = useCallback(async (email: string, password: string) => {
+    return new Promise<void>((resolve, reject) => {
+       setTimeout(() => {
+        const storedUser = fakeUsers[email];
+        if (storedUser && storedUser.password === password) {
+          const loggedInUser: UserData = {
+            uid: `local-${email}`,
+            email,
+            displayName: storedUser.displayName,
+            photoURL: storedUser.photoURL || '',
+            phone: storedUser.phone || '',
+          };
+          setUser(loggedInUser);
+          resolve();
+        } else {
+          reject(new Error("Email atau password salah."));
         }
-    }
-  }, [fetchFullUserData]);
+      }, 500);
+    });
+  }, [fakeUsers, setUser]);
 
+  const logout = useCallback(async () => {
+    return new Promise<void>((resolve) => {
+        setTimeout(() => {
+            setUser(null);
+            resolve();
+        }, 300);
+    });
+  }, [setUser]);
+  
+  const updateUser = useCallback(async (updates: Partial<UserData>) => {
+     return new Promise<void>((resolve) => {
+       setTimeout(() => {
+        if (user && user.email) {
+            const updatedUser = { ...user, ...updates };
+            setUser(updatedUser);
+            
+            const storedUser = fakeUsers[user.email];
+            if (storedUser) {
+                setFakeUsers(prev => ({
+                    ...prev,
+                    [user.email!]: { ...storedUser, ...updates }
+                }));
+            }
+            resolve();
+        }
+       }, 500);
+     });
+  }, [user, setUser, fakeUsers, setFakeUsers]);
 
-  const signUp = async (email: string, password: string, displayName: string) => {
-    // signUpApi will throw an error on failure, which will be caught by the UI component
-    await signUpApi(email, password, displayName);
-    // onAuthStateChanged will handle setting the user state
-  };
-
-  const login = async (email: string, password: string) => {
-    // loginApi will throw an error on failure, which will be caught by the UI component
-    await loginApi(email, password);
-     // onAuthStateChanged will handle setting the user state
-  };
-
-  const logout = async () => {
-    await logoutApi();
-    // onAuthStateChanged will set user to null
-  };
-
-  const value: AuthContextType = { user, loading, signUp, login, logout, refreshUser };
+  const value: AuthContextType = { user, loading, signUp, login, logout, updateUser };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
