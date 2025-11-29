@@ -1,14 +1,10 @@
 "use client";
 
 import { useState, useEffect, Dispatch, SetStateAction } from 'react';
-import { useAuth } from '@/context/auth-context';
 
 type SetValue<T> = Dispatch<SetStateAction<T>>;
 
 function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
-  const { user } = useAuth();
-  // Prefix the key with the user's UID to create separate storage for each user
-  const userKey = user ? `${user.uid}-${key}` : key;
 
   const [storedValue, setStoredValue] = useState<T>(() => {
     // Prevent build errors from trying to access window
@@ -17,7 +13,7 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
     }
 
     try {
-      const item = window.localStorage.getItem(userKey);
+      const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
       console.error(error);
@@ -34,18 +30,18 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
       setStoredValue(valueToStore);
       
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem(userKey, JSON.stringify(valueToStore));
+        window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {
       console.error(error);
     }
   };
 
-  // Re-fetch from localStorage when user changes
+  // This effect ensures state is updated if the key changes, which can happen when a user logs in/out.
   useEffect(() => {
     if (typeof window !== 'undefined') {
         try {
-            const item = window.localStorage.getItem(userKey);
+            const item = window.localStorage.getItem(key);
             setStoredValue(item ? JSON.parse(item) : initialValue);
         } catch (error) {
             console.error(error);
@@ -53,7 +49,7 @@ function useLocalStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userKey]);
+  }, [key]);
 
   return [storedValue, setValue];
 }

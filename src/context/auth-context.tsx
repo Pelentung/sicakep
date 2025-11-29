@@ -25,7 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const FAKE_USERS_STORAGE_KEY = 'fake-users';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useLocalStorage<UserData | null>('auth-user', null);
+  const [currentUser, setCurrentUser] = useLocalStorage<UserData | null>('auth-user', null);
   const [fakeUsers, setFakeUsers] = useLocalStorage<Record<string, any>>(FAKE_USERS_STORAGE_KEY, {});
   const [loading, setLoading] = useState(true);
 
@@ -62,45 +62,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             photoURL: storedUser.photoURL || '',
             phone: storedUser.phone || '',
           };
-          setUser(loggedInUser);
+          setCurrentUser(loggedInUser);
           resolve();
         } else {
           reject(new Error("Email atau password salah."));
         }
       }, 500);
     });
-  }, [fakeUsers, setUser]);
+  }, [fakeUsers, setCurrentUser]);
 
   const logout = useCallback(async () => {
     return new Promise<void>((resolve) => {
         setTimeout(() => {
-            setUser(null);
+            setCurrentUser(null);
             resolve();
         }, 300);
     });
-  }, [setUser]);
+  }, [setCurrentUser]);
   
   const updateUser = useCallback(async (updates: Partial<UserData>) => {
      return new Promise<void>((resolve) => {
        setTimeout(() => {
-        if (user && user.email) {
-            const updatedUser = { ...user, ...updates };
-            setUser(updatedUser);
+        if (currentUser && currentUser.email) {
+            const updatedUser = { ...currentUser, ...updates };
+            setCurrentUser(updatedUser);
             
-            const storedUser = fakeUsers[user.email];
+            const storedUser = fakeUsers[currentUser.email];
             if (storedUser) {
                 setFakeUsers(prev => ({
                     ...prev,
-                    [user.email!]: { ...storedUser, ...updates }
+                    [currentUser.email!]: { ...storedUser, ...updates }
                 }));
             }
             resolve();
         }
        }, 500);
      });
-  }, [user, setUser, fakeUsers, setFakeUsers]);
+  }, [currentUser, setCurrentUser, fakeUsers, setFakeUsers]);
 
-  const value: AuthContextType = { user, loading, signUp, login, logout, updateUser };
+  const value: AuthContextType = { user: currentUser, loading, signUp, login, logout, updateUser };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

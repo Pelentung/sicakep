@@ -38,9 +38,13 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export function DataProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>('transactions', []);
-  const [budgets, setBudgets] = useLocalStorage<Budget[]>('budgets', []);
-  const [bills, setBills] = useLocalStorage<Bill[]>('bills', []);
+  const transactionsKey = user ? `${user.uid}-transactions` : 'transactions';
+  const budgetsKey = user ? `${user.uid}-budgets` : 'budgets';
+  const billsKey = user ? `${user.uid}-bills` : 'bills';
+
+  const [transactions, setTransactions] = useLocalStorage<Transaction[]>(transactionsKey, []);
+  const [budgets, setBudgets] = useLocalStorage<Budget[]>(budgetsKey, []);
+  const [bills, setBills] = useLocalStorage<Bill[]>(billsKey, []);
   const [loading, setLoading] = useState(true);
 
   // When auth is done loading, data is also "done" loading from local storage
