@@ -7,6 +7,7 @@ import { errorEmitter } from "@/lib/events";
 
 
 export interface UserProfileData {
+    email: string;
     displayName: string;
     photoURL: string;
     phone: string;
@@ -14,27 +15,26 @@ export interface UserProfileData {
 }
 
 // Create a new user document in Firestore
-export const createUserDocument = async (uid: string, email: string, displayName: string) => {
+export const createUserDocument = async (uid: string, data: Omit<UserProfileData, 'createdAt'>) => {
   const userDocRef = doc(db, 'users', uid);
-  const userProfile: UserProfileData & { email: string } = {
-    displayName,
-    email: email,
-    photoURL: '',
-    phone: '',
+  const userProfile: UserProfileData = {
+    ...data,
     createdAt: serverTimestamp(),
   };
-  setDoc(userDocRef, userProfile).catch(error => {
+  try {
+    await setDoc(userDocRef, userProfile);
+  } catch (error) {
     if (error instanceof FirestoreError && error.code === 'permission-denied') {
-      const customError = new FirestorePermissionError({
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
         operation: 'create',
         path: userDocRef.path,
         requestResourceData: userProfile
-      });
-      errorEmitter.emit('permission-error', customError);
+      }));
     } else {
         console.error("Error creating user document:", error);
     }
-  });
+    // No re-throw, emitter handles it.
+  }
 };
 
 // Get a user's profile from Firestore
@@ -65,16 +65,18 @@ export const getUserProfile = async (uid: string): Promise<UserProfileData | nul
 // Update a user's profile
 export const updateUserProfile = async (uid: string, data: Partial<UserProfileData>) => {
     const userDocRef = doc(db, 'users', uid);
-    updateDoc(userDocRef, data).catch(error => {
-      if (error instanceof FirestoreError && error.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-            operation: 'update',
-            path: userDocRef.path,
-            requestResourceData: data,
-        }));
-      } else {
-        console.error("Error updating user profile:", error);
-      }
-      // Do not re-throw, let the emitter handle it.
-    });
+    try {
+        await updateDoc(userDocRef, data);
+    } catch (error) {
+        if (error instanceof FirestoreError && error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'update',
+                path: userDocRef.path,
+                requestResourceData: data,
+            }));
+        } else {
+            console.error("Error updating user profile:", error);
+        }
+        // Do not re-throw, let the emitter handle it.
+    }
 };
