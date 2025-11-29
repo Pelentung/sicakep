@@ -16,8 +16,9 @@ export interface UserProfileData {
 // Create a new user document in Firestore
 export const createUserDocument = async (uid: string, email: string, displayName: string) => {
   const userDocRef = doc(db, 'users', uid);
-  const userProfile: UserProfileData = {
+  const userProfile: UserProfileData & { email: string } = {
     displayName,
+    email: email,
     photoURL: '',
     phone: '',
     createdAt: serverTimestamp(),
@@ -43,6 +44,7 @@ export const getUserProfile = async (uid: string): Promise<UserProfileData | nul
     if (docSnap.exists()) {
       return docSnap.data() as UserProfileData;
     } else {
+      console.log("No such document!");
       return null;
     }
   } catch (error) {
@@ -51,6 +53,8 @@ export const getUserProfile = async (uid: string): Promise<UserProfileData | nul
         operation: 'get',
         path: userDocRef.path
       }));
+    } else {
+        console.error("Error getting user profile:", error);
     }
     return null;
   }
@@ -66,6 +70,8 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfileDa
             path: userDocRef.path,
             requestResourceData: data,
         }));
+      } else {
+        console.error("Error updating user profile:", error);
       }
       // Do not re-throw, let the emitter handle it.
     });
