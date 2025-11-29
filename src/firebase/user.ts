@@ -22,9 +22,7 @@ export const createUserDocument = async (uid: string, email: string, displayName
     phone: '',
     createdAt: serverTimestamp(),
   };
-  try {
-    await setDoc(userDocRef, userProfile);
-  } catch (error) {
+  setDoc(userDocRef, userProfile).catch(error => {
     if (error instanceof FirestoreError && error.code === 'permission-denied') {
       const customError = new FirestorePermissionError({
         operation: 'create',
@@ -33,9 +31,7 @@ export const createUserDocument = async (uid: string, email: string, displayName
       });
       errorEmitter.emit('permission-error', customError);
     }
-    // Do not rethrow
-  }
-  return userProfile;
+  });
 };
 
 // Get a user's profile from Firestore
@@ -63,9 +59,7 @@ export const getUserProfile = async (uid: string): Promise<UserProfileData | nul
 // Update a user's profile
 export const updateUserProfile = async (uid: string, data: Partial<UserProfileData>) => {
     const userDocRef = doc(db, 'users', uid);
-    try {
-      await updateDoc(userDocRef, data);
-    } catch (error) {
+    updateDoc(userDocRef, data).catch(error => {
       if (error instanceof FirestoreError && error.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             operation: 'update',
@@ -74,5 +68,5 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfileDa
         }));
       }
       // Do not re-throw, let the emitter handle it.
-    }
+    });
 };
