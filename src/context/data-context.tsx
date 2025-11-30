@@ -9,7 +9,6 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebas
 import { formatISO } from 'date-fns';
 import { errorEmitter } from '@/lib/events';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { v4 as uuidv4 } from 'uuid';
 
 
 interface DataContextType {
@@ -344,7 +343,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const uploadDocument = useCallback(async (file: File, name: string, onProgress: (progress: number) => void) => {
     if (!user) throw new Error("User not authenticated");
     
-    const fileId = uuidv4();
+    const fileId = crypto.randomUUID();
     const filePath = `users/${user.uid}/documents/${fileId}-${name}`;
     const storageRef = ref(storage, filePath);
     const uploadTask = uploadBytesResumable(storageRef, file);
