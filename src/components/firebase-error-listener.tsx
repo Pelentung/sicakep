@@ -20,8 +20,10 @@ export function FirebaseErrorListener() {
   const { user } = useAuth();
 
   useEffect(() => {
-    const handleError = (e: FirestorePermissionError) => {
-      setError(e);
+    const handleError = (e: any) => {
+       if (e instanceof FirestorePermissionError) {
+        setError(e);
+      }
     };
 
     errorEmitter.on('permission-error', handleError);

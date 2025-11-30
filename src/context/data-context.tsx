@@ -42,35 +42,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (user) {
       setLoading(true);
 
-      const commonErrorHandler = (collectionName: string) => (error: FirestoreError) => {
-        console.error(`Error listening to ${collectionName}:`, error);
+      const createErrorHandler = (collectionName: string) => (error: FirestoreError) => {
         if (error.code === 'permission-denied') {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
             operation: 'list',
             path: `users/${user.uid}/${collectionName}`
           }));
+        } else {
+          console.error(`An unexpected error occurred while listening to ${collectionName}:`, error);
         }
-        // For other errors, you might want a different kind of notification
       };
 
       const transactionsQuery = query(collection(db, `users/${user.uid}/transactions`), orderBy('date', 'desc'));
       const unsubTransactions = onSnapshot(transactionsQuery, (snapshot) => {
         const trans: Transaction[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
         setTransactions(trans);
-        setLoading(false); // Consider loading complete after first successful fetch
-      }, commonErrorHandler('transactions'));
+        setLoading(false); 
+      }, createErrorHandler('transactions'));
 
       const budgetsQuery = query(collection(db, `users/${user.uid}/budgets`));
       const unsubBudgets = onSnapshot(budgetsQuery, (snapshot) => {
         const buds: Budget[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget));
         setBudgets(buds);
-      }, commonErrorHandler('budgets'));
+      }, createErrorHandler('budgets'));
 
       const billsQuery = query(collection(db, `users/${user.uid}/bills`), orderBy('dueDate', 'asc'));
       const unsubBills = onSnapshot(billsQuery, (snapshot) => {
         const b: Bill[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bill));
         setBills(b);
-      }, commonErrorHandler('bills'));
+      }, createErrorHandler('bills'));
 
       return () => {
         unsubTransactions();
