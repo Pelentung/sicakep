@@ -9,7 +9,6 @@ import {
   PieChart,
   Bell,
   User,
-  Store,
 } from 'lucide-react';
 
 import {
@@ -26,7 +25,6 @@ const links = [
   { href: '/dashboard/transactions', label: 'Transaksi', icon: ArrowLeftRight },
   { href: '/dashboard/budgets', label: 'Anggaran', icon: CircleDollarSign },
   { href: '/dashboard/bills', label: 'Tagihan', icon: Bell },
-  { href: '/dashboard/merchant', label: 'Merchant', icon: Store },
   { href: '/dashboard/reports', label: 'Laporan', icon: PieChart },
   { href: '/dashboard/profile', label: 'Profil', icon: User },
 ];

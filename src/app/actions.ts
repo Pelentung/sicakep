@@ -1,7 +1,6 @@
 'use server';
 
 import { parseISO, startOfMonth, endOfMonth } from 'date-fns';
-import type { Merchant } from '@/lib/merchant-data';
 import type { Transaction } from '@/lib/types';
 
 
@@ -33,28 +32,4 @@ export async function getAIInsightsAction(transactions: Transaction[], selectedM
   ];
 
   return { success: true, insights: insights };
-}
-
-export async function handleMerchantTransactionAction(
-  merchant: Merchant,
-  amount: number,
-  customerId: string
-): Promise<{ success: boolean; message?: string; error?: string }> {
-  console.log(`Memulai transaksi untuk: ${merchant.name}, Jumlah: ${amount}, ID Pelanggan: ${customerId}`);
-  
-  // This is a simulation since we don't have a backend.
-  try {
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call delay
-
-    const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount);
-    
-    return { 
-      success: true,
-      message: `(Simulasi) Pembayaran ${merchant.name} sebesar ${formattedAmount} telah berhasil.`
-    };
-
-  } catch (error: any) {
-    console.error('Simulated Merchant Transaction Error:', error);
-    return { success: false, error: error.message || 'Terjadi kesalahan simulasi pada server.' };
-  }
 }
