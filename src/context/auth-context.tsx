@@ -1,7 +1,10 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { useLocalStorage } from '@/hooks/use-local-storage';
+import { onAuthStateChanged, User, updateProfile as updateFirebaseProfile } from 'firebase/auth';
+import { auth } from '@/firebase/config';
+import { signUp as signUpFirebase, login as loginFirebase, logout as logoutFirebase } from '@/firebase/auth';
+import { getUserProfile, updateUserProfile } from '@/firebase/user';
 
 export interface UserData {
     uid: string;
@@ -14,93 +17,73 @@ export interface UserData {
 interface AuthContextType {
   user: UserData | null;
   loading: boolean;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName: string) => Promise<any>;
+  login: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<UserData>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const FAKE_USERS_STORAGE_KEY = 'fake-users';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useLocalStorage<UserData | null>('auth-user', null);
-  const [fakeUsers, setFakeUsers] = useLocalStorage<Record<string, any>>(FAKE_USERS_STORAGE_KEY, {});
+  const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate initial auth check
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
+      if (firebaseUser) {
+        // User is signed in, get profile from Firestore
+        const profile = await getUserProfile(firebaseUser.uid);
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: profile?.displayName || firebaseUser.displayName,
+          photoURL: profile?.photoURL || firebaseUser.photoURL,
+          phone: profile?.phone || null,
+        });
+      } else {
+        // User is signed out
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        if (fakeUsers[email]) {
-          reject(new Error("Email sudah digunakan."));
-        } else {
-          setFakeUsers(prev => ({
-            ...prev,
-            [email]: { email, password, displayName, photoURL: '', phone: '' }
-          }));
-          resolve();
-        }
-      }, 500);
-    });
-  }, [fakeUsers, setFakeUsers]);
+    return signUpFirebase(email, password, displayName);
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    return new Promise<void>((resolve, reject) => {
-       setTimeout(() => {
-        const storedUser = fakeUsers[email];
-        if (storedUser && storedUser.password === password) {
-          const loggedInUser: UserData = {
-            uid: `local-${email}`,
-            email,
-            displayName: storedUser.displayName,
-            photoURL: storedUser.photoURL || '',
-            phone: storedUser.phone || '',
-          };
-          setCurrentUser(loggedInUser);
-          resolve();
-        } else {
-          reject(new Error("Email atau password salah."));
-        }
-      }, 500);
-    });
-  }, [fakeUsers, setCurrentUser]);
+    return loginFirebase(email, password);
+  }, []);
 
   const logout = useCallback(async () => {
-    return new Promise<void>((resolve) => {
-        setTimeout(() => {
-            setCurrentUser(null);
-            resolve();
-        }, 300);
-    });
-  }, [setCurrentUser]);
+    await logoutFirebase();
+  }, []);
   
   const updateUser = useCallback(async (updates: Partial<UserData>) => {
-     return new Promise<void>((resolve) => {
-       setTimeout(() => {
-        if (currentUser && currentUser.email) {
-            const updatedUser = { ...currentUser, ...updates };
-            setCurrentUser(updatedUser);
-            
-            const storedUser = fakeUsers[currentUser.email];
-            if (storedUser) {
-                setFakeUsers(prev => ({
-                    ...prev,
-                    [currentUser.email!]: { ...storedUser, ...updates }
-                }));
-            }
-            resolve();
-        }
-       }, 500);
-     });
-  }, [currentUser, setCurrentUser, fakeUsers, setFakeUsers]);
+    if (!auth.currentUser) throw new Error("Not authenticated");
 
-  const value: AuthContextType = { user: currentUser, loading, signUp, login, logout, updateUser };
+    const authUpdates: { displayName?: string, photoURL?: string } = {};
+    if(updates.displayName) authUpdates.displayName = updates.displayName;
+    if(updates.photoURL) authUpdates.photoURL = updates.photoURL;
+
+    // Update Firebase Auth profile
+    if(Object.keys(authUpdates).length > 0){
+        await updateFirebaseProfile(auth.currentUser, authUpdates);
+    }
+    
+    // Update Firestore profile
+    await updateUserProfile(auth.currentUser.uid, updates);
+
+    // Update local state
+    setUser(prevUser => prevUser ? { ...prevUser, ...updates } : null);
+
+  }, []);
+
+  const value: AuthContextType = { user, loading, signUp, login, logout, updateUser };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

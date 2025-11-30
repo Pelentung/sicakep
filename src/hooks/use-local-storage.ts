@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Dispatch, SetStateAction, useCallback } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 
 // A function to get the initial value from localStorage or return the initialValue
 function getStorageValue<T>(key: string, initialValue: T): T {

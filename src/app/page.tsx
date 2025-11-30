@@ -28,18 +28,12 @@ export default function WelcomePage() {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   
-  const [isClient, setIsClient] = useState(false);
-
+  // Redirect if user is already logged in
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Redirect if user is already logged in, runs only on client
-  useEffect(() => {
-    if (user && !authLoading && isClient) {
+    if (user) {
       router.replace('/dashboard');
     }
-  }, [user, authLoading, router, isClient]);
+  }, [user, router]);
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -77,7 +71,8 @@ export default function WelcomePage() {
         title: 'Pendaftaran Berhasil',
         description: 'Akun Anda telah dibuat. Silakan login.',
       });
-      // Redirect is handled by useEffect after login
+      // This will automatically log the user in due to onAuthStateChanged
+      // and the useEffect will redirect.
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -86,9 +81,8 @@ export default function WelcomePage() {
       });
     }
   };
-
-  // Show a loading spinner while checking auth state on the client, or if user is logged in and about to be redirected.
-  if (!isClient || (authLoading && !user) || (user && !authLoading)) {
+  
+  if (authLoading || user) {
      return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <LoaderCircle className="h-10 w-10 animate-spin text-primary" />

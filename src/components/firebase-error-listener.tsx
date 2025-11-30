@@ -12,7 +12,7 @@ import {
   AlertDialogFooter,
 } from './ui/alert-dialog';
 import { Button } from './ui/button';
-import { Code, ShieldAlert } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
 export function FirebaseErrorListener() {

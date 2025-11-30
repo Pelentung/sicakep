@@ -2,19 +2,13 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Transaction, Budget, Bill } from '@/lib/types';
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import { 
-    addTransaction as addTransactionLocal,
-    updateBudget as updateBudgetLocal,
-    deleteBudget as deleteBudgetLocal,
-    addBill as addBillLocal,
-    updateBill as updateBillLocal,
-    deleteBill as deleteBillLocal,
-    addBudget as addBudgetLocal,
-} from '@/lib/data';
-import { formatISO } from 'date-fns';
 import { useAuth } from './auth-context';
-import { v4 as uuidv4 } from 'uuid';
+import { db } from '@/firebase/config';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp, query, orderBy, FirestoreError } from 'firebase/firestore';
+import { formatISO } from 'date-fns';
+import { errorEmitter } from '@/lib/events';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 interface DataContextType {
   transactions: Transaction[];
@@ -38,107 +32,246 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export function DataProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   
-  const transactionsKey = user ? `${user.uid}-transactions` : 'transactions';
-  const budgetsKey = user ? `${user.uid}-budgets` : 'budgets';
-  const billsKey = user ? `${user.uid}-bills` : 'bills';
-
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>(transactionsKey, []);
-  const [budgets, setBudgets] = useLocalStorage<Budget[]>(budgetsKey, []);
-  const [bills, setBills] = useLocalStorage<Bill[]>(billsKey, []);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // When auth is done loading, data is also "done" loading from local storage
+  // Firestore listeners
   useEffect(() => {
-    if (!authLoading) {
+    if (user) {
+      setLoading(true);
+
+      const commonErrorHandler = (collectionName: string) => (error: FirestoreError) => {
+        console.error(`Error listening to ${collectionName}:`, error);
+        if (error.code === 'permission-denied') {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            operation: 'list',
+            path: `users/${user.uid}/${collectionName}`
+          }));
+        }
+        // For other errors, you might want a different kind of notification
+      };
+
+      const transactionsQuery = query(collection(db, `users/${user.uid}/transactions`), orderBy('date', 'desc'));
+      const unsubTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+        const trans: Transaction[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+        setTransactions(trans);
+        setLoading(false); // Consider loading complete after first successful fetch
+      }, commonErrorHandler('transactions'));
+
+      const budgetsQuery = query(collection(db, `users/${user.uid}/budgets`));
+      const unsubBudgets = onSnapshot(budgetsQuery, (snapshot) => {
+        const buds: Budget[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget));
+        setBudgets(buds);
+      }, commonErrorHandler('budgets'));
+
+      const billsQuery = query(collection(db, `users/${user.uid}/bills`), orderBy('dueDate', 'asc'));
+      const unsubBills = onSnapshot(billsQuery, (snapshot) => {
+        const b: Bill[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bill));
+        setBills(b);
+      }, commonErrorHandler('bills'));
+
+      return () => {
+        unsubTransactions();
+        unsubBudgets();
+        unsubBills();
+      };
+    } else if (!authLoading) {
+      // User is logged out, clear data
+      setTransactions([]);
+      setBudgets([]);
+      setBills([]);
       setLoading(false);
     }
-  }, [authLoading]);
+  }, [user, authLoading]);
   
-  // Clear data on logout
-  useEffect(() => {
-      if (!user && !authLoading) {
-          setTransactions([]);
-          setBudgets([]);
-          setBills([]);
-      }
-  }, [user, authLoading, setTransactions, setBudgets, setBills])
-
   const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction = { ...transaction, id: uuidv4() };
-    addTransactionLocal(newTransaction, setTransactions);
-  }, [setTransactions]);
+      if (!user) throw new Error("User not authenticated");
+      const collectionRef = collection(db, `users/${user.uid}/transactions`);
+      const payload = { ...transaction, createdAt: serverTimestamp() };
+      addDoc(collectionRef, payload).catch(error => {
+          if (error instanceof FirestoreError && error.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  operation: 'create',
+                  path: `${collectionRef.path}/<new_id>`,
+                  requestResourceData: payload,
+              }));
+          } else {
+              console.error("Error adding transaction:", error);
+          }
+      });
+  }, [user]);
 
   const addBudget = useCallback(async (budget: Omit<Budget, 'id'>) => {
-    const newBudget = { ...budget, id: uuidv4() };
-    addBudgetLocal(newBudget, setBudgets);
-  }, [setBudgets]);
+      if (!user) throw new Error("User not authenticated");
+      const collectionRef = collection(db, `users/${user.uid}/budgets`);
+      const payload = { ...budget, createdAt: serverTimestamp() };
+      addDoc(collectionRef, payload).catch(error => {
+          if (error instanceof FirestoreError && error.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  operation: 'create',
+                  path: `${collectionRef.path}/<new_id>`,
+                  requestResourceData: payload,
+              }));
+          } else {
+              console.error("Error adding budget:", error);
+          }
+      });
+  }, [user]);
 
   const updateBudget = useCallback(async (id: string, newAmount: number) => {
-    updateBudgetLocal(id, newAmount, setBudgets);
-  }, [setBudgets]);
+      if (!user) throw new Error("User not authenticated");
+      const docRef = doc(db, `users/${user.uid}/budgets`, id);
+      const payload = { amount: newAmount };
+      updateDoc(docRef, payload).catch(error => {
+          if (error instanceof FirestoreError && error.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  operation: 'update',
+                  path: docRef.path,
+                  requestResourceData: payload,
+              }));
+          } else {
+              console.error("Error updating budget:", error);
+          }
+      });
+  }, [user]);
 
   const deleteBudget = useCallback(async (id: string) => {
-    deleteBudgetLocal(id, setBudgets);
-  }, [setBudgets]);
+      if (!user) throw new Error("User not authenticated");
+      const docRef = doc(db, `users/${user.uid}/budgets`, id);
+      deleteDoc(docRef).catch(error => {
+          if (error instanceof FirestoreError && error.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  operation: 'delete',
+                  path: docRef.path,
+              }));
+          } else {
+              console.error("Error deleting budget:", error);
+          }
+      });
+  }, [user]);
 
   const refreshBudgets = useCallback(() => {
-    // No-op for local storage, changes are instant
+    // No-op for Firestore real-time listener
   }, []);
   
   const addBill = useCallback(async (bill: Omit<Bill, 'id' | 'isPaid'>) => {
+    if (!user) throw new Error("User not authenticated");
     const [year, month, day] = bill.dueDate.split('-').map(Number);
     const [hours, minutes] = bill.dueTime.split(':').map(Number);
     const dueDate = new Date(year, month - 1, day, hours, minutes);
 
-    const newBill = {
+    const collectionRef = collection(db, `users/${user.uid}/bills`);
+    const payload = {
         ...bill,
-        id: uuidv4(),
         isPaid: false,
         dueDate: formatISO(dueDate),
+        createdAt: serverTimestamp(),
     };
-    addBillLocal(newBill, setBills);
-  }, [setBills]);
+    addDoc(collectionRef, payload).catch(error => {
+        if (error instanceof FirestoreError && error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'create',
+                path: `${collectionRef.path}/<new_id>`,
+                requestResourceData: payload,
+            }));
+        } else {
+            console.error("Error adding bill:", error);
+        }
+    });
+  }, [user]);
 
   const updateBill = useCallback(async (id: string, updates: Partial<Omit<Bill, 'id'>>) => {
-      updateBillLocal(id, updates, setBills);
-  }, [setBills]);
+      if (!user) throw new Error("User not authenticated");
+      const docRef = doc(db, `users/${user.uid}/bills`, id);
+      let finalUpdates: Partial<Bill> = { ...updates };
+      if (updates.dueDate && 'dueTime' in updates && updates.dueTime) {
+        const [year, month, day] = updates.dueDate.split('-').map(Number);
+        const [hours, minutes] = updates.dueTime.split(':').map(Number);
+        const newDueDate = new Date(year, month - 1, day, hours, minutes);
+        finalUpdates.dueDate = formatISO(newDueDate);
+      }
+      updateDoc(docRef, finalUpdates).catch(error => {
+          if (error instanceof FirestoreError && error.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  operation: 'update',
+                  path: docRef.path,
+                  requestResourceData: finalUpdates,
+              }));
+          } else {
+              console.error("Error updating bill:", error);
+          }
+      });
+  }, [user]);
 
   const deleteBill = useCallback(async (id: string) => {
-      deleteBillLocal(id, setBills);
-  }, [setBills]);
+      if (!user) throw new Error("User not authenticated");
+      const docRef = doc(db, `users/${user.uid}/bills`, id);
+      deleteDoc(docRef).catch(error => {
+          if (error instanceof FirestoreError && error.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  operation: 'delete',
+                  path: docRef.path,
+              }));
+          } else {
+              console.error("Error deleting bill:", error);
+          }
+      });
+  }, [user]);
 
   const toggleBillPaidStatus = useCallback(async (id: string, currentStatus: boolean) => {
+      if (!user) throw new Error("User not authenticated");
       const newStatus = !currentStatus;
       const bill = bills.find(b => b.id === id);
-      
-      if (!bill) {
-          console.error("Bill not found for toggling");
-          return;
-      }
+      if (!bill) return;
 
-      updateBillLocal(id, { isPaid: newStatus }, setBills);
-      
-      if (newStatus) { // If marking as paid
-          addTransaction({
+      const batch = writeBatch(db);
+
+      // Update bill status
+      const billRef = doc(db, `users/${user.uid}/bills`, id);
+      batch.update(billRef, { isPaid: newStatus });
+
+      // If marking as paid, add a transaction
+      if (newStatus) {
+          const transactionRef = doc(collection(db, `users/${user.uid}/transactions`));
+          batch.set(transactionRef, {
               type: 'expense',
               amount: bill.amount,
               category: 'Tagihan',
               date: new Date().toISOString(),
               description: `Pembayaran: ${bill.name}`,
-          })
+              createdAt: serverTimestamp()
+          });
       }
-  }, [bills, setBills, addTransaction]);
+      // Note: We don't handle un-paying a bill by deleting the transaction automatically.
+      // This could be complex and lead to confusing user experience.
+
+      batch.commit().catch(error => {
+           if (error instanceof FirestoreError && error.code === 'permission-denied') {
+              // This is a complex error to model. We'll emit a generic one for the batch.
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  operation: 'update',
+                  path: billRef.path, // We report the primary operation path
+                  requestResourceData: { isPaid: newStatus, note: "This was a batch write with a transaction." }
+              }));
+          } else {
+              console.error("Error toggling bill status:", error);
+          }
+      });
+
+  }, [user, bills]);
 
 
   const refreshBills = useCallback(async () => {
-    // No-op for local storage
+    // No-op for Firestore real-time listener
   }, []);
 
   const value = {
     transactions,
     budgets,
     bills,
-    loading,
+    loading: authLoading || loading,
     addTransaction,
     addBudget,
     updateBudget,
