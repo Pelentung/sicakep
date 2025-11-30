@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent } from '../ui/card';
+import { EditTransactionDialog } from './edit-transaction-dialog';
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('id-ID', {
@@ -73,6 +74,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
                 <TableHead className="hidden md:table-cell">Kategori</TableHead>
                 <TableHead className="hidden md:table-cell">Tanggal</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
+                <TableHead className="w-[50px] text-right">Aksi</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -93,7 +95,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
                             <ArrowDownCircle className="h-5 w-5 text-red-500 md:hidden" />
                         )}
                         <div>
-                          {transaction.description}
+                          {transaction.description || <span className="text-muted-foreground italic">Tanpa deskripsi</span>}
                           <div className="text-sm text-muted-foreground md:hidden">
                             {format(parseISO(transaction.date), 'd MMM yyyy', { locale: id })} - {transaction.category}
                           </div>
@@ -105,6 +107,9 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{format(parseISO(transaction.date), 'd MMMM yyyy', { locale: id })}</TableCell>
                     <TableCell className="text-right">{formatCurrency(transaction.amount)}</TableCell>
+                    <TableCell className="text-right">
+                        <EditTransactionDialog transaction={transaction} />
+                    </TableCell>
                 </TableRow>
                 ))}
             </TableBody>

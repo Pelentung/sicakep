@@ -18,6 +18,8 @@ interface DataContextType {
   notes: Note[];
   loading: boolean;
   addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
+  updateTransaction: (id: string, updates: Partial<Omit<Transaction, 'id'>>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
   addBudget: (budget: Omit<Budget, 'id'>) => Promise<void>;
   updateBudget: (id: string, newAmount: number) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
@@ -116,6 +118,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
               console.error("Error adding transaction:", error);
           }
       });
+  }, [user]);
+
+  const updateTransaction = useCallback(async (id: string, updates: Partial<Omit<Transaction, 'id'>>) => {
+    if (!user) throw new Error("User not authenticated");
+    const docRef = doc(db, `users/${user.uid}/transactions`, id);
+    updateDoc(docRef, updates).catch(error => {
+        if (error instanceof FirestoreError && error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'update',
+                path: docRef.path,
+                requestResourceData: updates,
+            }));
+        } else {
+            console.error("Error updating transaction:", error);
+        }
+    });
+  }, [user]);
+
+  const deleteTransaction = useCallback(async (id: string) => {
+    if (!user) throw new Error("User not authenticated");
+    const docRef = doc(db, `users/${user.uid}/transactions`, id);
+    deleteDoc(docRef).catch(error => {
+        if (error instanceof FirestoreError && error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'delete',
+                path: docRef.path,
+            }));
+        } else {
+            console.error("Error deleting transaction:", error);
+        }
+    });
   }, [user]);
 
   const addBudget = useCallback(async (budget: Omit<Budget, 'id'>) => {
@@ -335,6 +368,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     notes,
     loading: authLoading || loading,
     addTransaction,
+    updateTransaction,
+    deleteTransaction,
     addBudget,
     updateBudget,
     deleteBudget,
