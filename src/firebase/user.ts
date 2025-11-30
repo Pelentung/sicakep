@@ -84,7 +84,7 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfileDa
 };
 
 // Upload profile picture and get URL
-export const uploadProfilePicture = async (uid: string, file: File): Promise<string> => {
+export const uploadProfilePicture = async (uid: string, file: File): Promise<{ downloadURL: string; filePath: string }> => {
     // Limit file size to 1MB
     if (file.size > 1 * 1024 * 1024) {
         throw new Error("Ukuran file tidak boleh melebihi 1MB.");
@@ -95,30 +95,27 @@ export const uploadProfilePicture = async (uid: string, file: File): Promise<str
     const storageRef = ref(storage, filePath);
 
     try {
-        // Delete old picture if exists
-        const userProfile = await getUserProfile(uid);
-        if (userProfile?.photoPath) {
-            const oldPhotoRef = ref(storage, userProfile.photoPath);
-            try {
-                await deleteObject(oldPhotoRef);
-            } catch (error: any) {
-                // It's okay if the old file doesn't exist, log other errors
-                if (error.code !== 'storage/object-not-found') {
-                    console.warn("Could not delete old profile picture:", error);
-                }
-            }
-        }
-
-        // Upload new picture
+        // Upload new picture first
         const snapshot = await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(snapshot.ref);
 
-        // Update the photoPath in the user's profile
-        await updateUserProfile(uid, { photoPath: filePath });
-
-        return downloadURL;
+        return { downloadURL, filePath };
     } catch (error) {
         console.error("Error uploading profile picture:", error);
         throw new Error("Gagal mengunggah gambar. Pastikan Anda memiliki izin yang benar.");
+    }
+};
+
+export const deleteOldProfilePicture = async (photoPath: string) => {
+    if (!photoPath) return;
+
+    const oldPhotoRef = ref(storage, photoPath);
+    try {
+        await deleteObject(oldPhotoRef);
+    } catch (error: any) {
+        // It's okay if the old file doesn't exist, log other errors
+        if (error.code !== 'storage/object-not-found') {
+            console.warn("Could not delete old profile picture:", error);
+        }
     }
 };
