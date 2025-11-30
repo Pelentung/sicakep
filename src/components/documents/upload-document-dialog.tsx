@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,21 +25,11 @@ interface UploadDocumentDialogProps {
 export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDocumentDialogProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [docName, setDocName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
-  useEffect(() => {
-    if (file) {
-      // Pre-fill name input without extension
-      setDocName(file.name.replace(/\.[^/.]+$/, ""));
-    } else {
-      setDocName('');
-    }
-  }, [file]);
-
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -96,7 +86,6 @@ export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDoc
 
   const resetState = () => {
     setFile(null);
-    setDocName('');
     setIsUploading(false);
     setUploadProgress(0);
     if(fileInputRef.current) {
@@ -120,19 +109,10 @@ export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDoc
       });
       return;
     }
-     if (!docName.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Nama dokumen kosong',
-        description: 'Silakan beri nama untuk dokumen Anda.',
-      });
-      return;
-    }
 
     setIsUploading(true);
     try {
-      const finalName = docName.trim() + '.pdf';
-      await onDocumentUploaded(file, finalName, setUploadProgress);
+      await onDocumentUploaded(file, file.name, setUploadProgress);
       toast({
         title: 'Sukses',
         description: 'Dokumen Anda telah berhasil diunggah.',
@@ -192,16 +172,6 @@ export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDoc
                         <Button variant="ghost" size="icon" onClick={() => setFile(null)} disabled={isUploading}>
                             <X className="h-4 w-4" />
                         </Button>
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="docName">Nama Dokumen (tanpa .pdf)</Label>
-                        <Input
-                            id="docName"
-                            value={docName}
-                            onChange={(e) => setDocName(e.target.value)}
-                            placeholder="Nama file baru Anda"
-                            disabled={isUploading}
-                        />
                     </div>
                 </div>
             )}
