@@ -27,3 +27,10 @@ export type FinancialSummary = {
   totalExpenses: number;
   balance: number;
 };
+
+export type Note = {
+    id: string;
+    title: string;
+    content: string;
+    createdAt: string; // ISO 8601 format
+};

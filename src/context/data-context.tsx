@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { Transaction, Budget, Bill } from '@/lib/types';
+import type { Transaction, Budget, Bill, Note } from '@/lib/types';
 import { useAuth } from './auth-context';
 import { db } from '@/firebase/config';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp, query, orderBy, FirestoreError } from 'firebase/firestore';
@@ -14,6 +14,7 @@ interface DataContextType {
   transactions: Transaction[];
   budgets: Budget[];
   bills: Bill[];
+  notes: Note[];
   loading: boolean;
   addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
   addBudget: (budget: Omit<Budget, 'id'>) => Promise<void>;
@@ -25,6 +26,9 @@ interface DataContextType {
   deleteBill: (id: string) => Promise<void>;
   toggleBillPaidStatus: (id: string, currentStatus: boolean) => Promise<void>;
   refreshBills: () => void;
+  addNote: (note: Omit<Note, 'id' | 'createdAt'>) => Promise<void>;
+  updateNote: (id: string, updates: Partial<Omit<Note, 'id' | 'createdAt'>>) => Promise<void>;
+  deleteNote: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -35,6 +39,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Firestore listeners
@@ -72,16 +77,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setBills(b);
       }, createErrorHandler('bills'));
 
+      const notesQuery = query(collection(db, `users/${user.uid}/notes`), orderBy('createdAt', 'desc'));
+      const unsubNotes = onSnapshot(notesQuery, (snapshot) => {
+        const n: Note[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate().toISOString() } as Note));
+        setNotes(n);
+      }, createErrorHandler('notes'));
+
+
       return () => {
         unsubTransactions();
         unsubBudgets();
         unsubBills();
+        unsubNotes();
       };
     } else if (!authLoading) {
       // User is logged out, clear data
       setTransactions([]);
       setBudgets([]);
       setBills([]);
+      setNotes([]);
       setLoading(false);
     }
   }, [user, authLoading]);
@@ -267,10 +281,59 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // No-op for Firestore real-time listener
   }, []);
 
+  const addNote = useCallback(async (note: Omit<Note, 'id' | 'createdAt'>) => {
+    if (!user) throw new Error("User not authenticated");
+    const collectionRef = collection(db, `users/${user.uid}/notes`);
+    const payload = { ...note, createdAt: serverTimestamp() };
+    addDoc(collectionRef, payload).catch(error => {
+        if (error instanceof FirestoreError && error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'create',
+                path: `${collectionRef.path}/<new_id>`,
+                requestResourceData: payload,
+            }));
+        } else {
+            console.error("Error adding note:", error);
+        }
+    });
+  }, [user]);
+
+  const updateNote = useCallback(async (id: string, updates: Partial<Omit<Note, 'id' | 'createdAt'>>) => {
+      if (!user) throw new Error("User not authenticated");
+      const docRef = doc(db, `users/${user.uid}/notes`, id);
+      updateDoc(docRef, updates).catch(error => {
+          if (error instanceof FirestoreError && error.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  operation: 'update',
+                  path: docRef.path,
+                  requestResourceData: updates,
+              }));
+          } else {
+              console.error("Error updating note:", error);
+          }
+      });
+  }, [user]);
+
+  const deleteNote = useCallback(async (id: string) => {
+      if (!user) throw new Error("User not authenticated");
+      const docRef = doc(db, `users/${user.uid}/notes`, id);
+      deleteDoc(docRef).catch(error => {
+          if (error instanceof FirestoreError && error.code === 'permission-denied') {
+              errorEmitter.emit('permission-error', new FirestorePermissionError({
+                  operation: 'delete',
+                  path: docRef.path,
+              }));
+          } else {
+              console.error("Error deleting note:", error);
+          }
+      });
+  }, [user]);
+
   const value = {
     transactions,
     budgets,
     bills,
+    notes,
     loading: authLoading || loading,
     addTransaction,
     addBudget,
@@ -282,6 +345,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     deleteBill,
     toggleBillPaidStatus,
     refreshBills,
+    addNote,
+    updateNote,
+    deleteNote
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
