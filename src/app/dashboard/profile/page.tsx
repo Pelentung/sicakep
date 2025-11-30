@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { User as UserIcon, LoaderCircle } from 'lucide-react';
-import { useAuth, type UserData } from '@/context/auth-context';
+import { useAuth } from '@/context/auth-context';
 
 export default function ProfilePage() {
   const { toast } = useToast();
@@ -16,6 +16,7 @@ export default function ProfilePage() {
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -36,10 +37,10 @@ export default function ProfilePage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        const result = reader.result as string;
-        setAvatarPreview(result);
+        setAvatarPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -51,18 +52,16 @@ export default function ProfilePage() {
 
     setIsSaving(true);
     try {
-      const updatedProfile: Partial<UserData> = {
+      await updateUser({
           displayName: name,
           phone,
-          photoURL: avatarPreview || user.photoURL || '',
-      };
-      
-      await updateUser(updatedProfile);
+      }, avatarFile);
 
       toast({
         title: 'Profil Diperbarui',
         description: 'Informasi profil Anda telah berhasil disimpan.',
       });
+      setAvatarFile(null); // Reset file input after successful upload
     } catch (error) {
         console.error("Profile update error:", error);
         toast({
@@ -107,7 +106,7 @@ export default function ProfilePage() {
                 <Button type="button" onClick={handleAvatarClick} disabled={isSaving}>
                   Unggah Foto
                 </Button>
-                <p className="text-xs text-muted-foreground">PNG, JPG, GIF hingga 10MB.</p>
+                <p className="text-xs text-muted-foreground">PNG, JPG, GIF hingga 1MB.</p>
                 <input
                   type="file"
                   ref={fileInputRef}
