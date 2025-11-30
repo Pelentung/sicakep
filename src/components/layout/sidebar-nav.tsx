@@ -18,6 +18,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarContent,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/logo';
 
@@ -33,6 +34,11 @@ const links = [
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const { setOpenMobile } = useSidebar();
+
+  const handleLinkClick = () => {
+    setOpenMobile(false);
+  };
 
   return (
     <>
@@ -47,6 +53,7 @@ export function SidebarNav() {
                 asChild
                 isActive={pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard')}
                 tooltip={link.label}
+                onClick={handleLinkClick}
               >
                 <Link href={link.href}>
                   <link.icon />
