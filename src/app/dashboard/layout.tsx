@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Header } from '@/components/layout/header';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import {
   Sidebar,
@@ -12,6 +11,7 @@ import {
 import { BillAlarmManager } from '@/components/bills/bill-alarm-manager';
 import { useAuth } from '@/context/auth-context';
 import { LoaderCircle } from 'lucide-react';
+import { DynamicHeader } from '@/components/layout/dynamic-header';
 
 
 export default function DashboardLayout({
@@ -43,7 +43,7 @@ export default function DashboardLayout({
         </Sidebar>
         <SidebarInset>
           <div className="flex min-h-screen flex-col">
-            <Header />
+            <DynamicHeader />
             <main className="flex-1 p-4 lg:p-6">{children}</main>
           </div>
         </SidebarInset>
