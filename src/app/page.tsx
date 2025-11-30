@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoaderCircle, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
+import Image from 'next/image';
 
 export default function WelcomePage() {
   const router = useRouter();
@@ -92,9 +93,18 @@ export default function WelcomePage() {
   
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="mb-8 flex items-center gap-2">
-        <Wallet className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold text-foreground">SICAKEP</h1>
+      <div className="mb-8 flex flex-col items-center justify-center gap-2">
+        <div className="flex items-center gap-2">
+            <Image
+                src="https://play-lh.googleusercontent.com/Dt7EL9-m03uljyP12Jfy-PKN2ce5NacLiOuMzZY15Sq_eChsP_tQfEQwEWMVXrTV1OfF=w240-h480-rw"
+                alt="SICAKEP Logo"
+                width={30}
+                height={30}
+                className="rounded-md"
+            />
+            <h1 className="text-3xl font-bold text-foreground">SICAKEP</h1>
+        </div>
+        <p className="text-sm text-primary">Sistem Pencatatan Keuangan Pribadi</p>
       </div>
       <Tabs defaultValue="login" className="w-full max-w-sm">
         <TabsList className="grid w-full grid-cols-2">
