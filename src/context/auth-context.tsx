@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { onAuthStateChanged, User, updateProfile as updateFirebaseProfile } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 import { signUp as signUpFirebase, login as loginFirebase, logout as logoutFirebase } from '@/firebase/auth';
-import { getUserProfile, updateUserProfile, uploadProfilePicture, deleteOldProfilePicture } from '@/firebase/user';
+import { getUserProfile, updateUserProfile } from '@/firebase/user';
 
 export interface UserData {
     uid: string;
@@ -20,7 +20,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, displayName: string) => Promise<any>;
   login: (email: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
-  updateUser: (updates: Partial<Omit<UserData, 'uid' | 'photoURL' | 'email'>>, avatarFile?: File | null) => Promise<void>;
+  updateUser: (updates: Partial<Omit<UserData, 'uid' | 'photoURL' | 'email'>>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,46 +63,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await logoutFirebase();
   }, []);
   
-  const updateUser = useCallback(async (updates: Partial<Omit<UserData, 'uid' | 'photoURL' | 'email'>>, avatarFile: File | null = null) => {
+  const updateUser = useCallback(async (updates: Partial<Omit<UserData, 'uid' | 'photoURL' | 'email'>>) => {
     if (!auth.currentUser) throw new Error("Not authenticated");
     const { uid } = auth.currentUser;
-    const userProfile = await getUserProfile(uid);
-
-    let newPhoto = {
-        downloadURL: undefined as string | undefined,
-        filePath: undefined as string | undefined,
-    };
-
-    // 1. If a new avatar file is provided, upload it and get its URL and path.
-    if (avatarFile) {
-        newPhoto = await uploadProfilePicture(uid, avatarFile);
-    }
     
-    // 2. Prepare data for Firestore and Firebase Auth updates.
+    // Prepare data for Firestore and Firebase Auth updates.
     const firestoreUpdates: { [key: string]: any } = { ...updates };
-    const authUpdates: { displayName?: string; photoURL?: string } = {};
+    const authUpdates: { displayName?: string } = {};
 
     if (updates.displayName) {
         authUpdates.displayName = updates.displayName;
     }
-    if (newPhoto.downloadURL) {
-        firestoreUpdates.photoURL = newPhoto.downloadURL;
-        firestoreUpdates.photoPath = newPhoto.filePath; // Store the new path
-        authUpdates.photoURL = newPhoto.downloadURL;
-    }
 
-    // 3. Perform updates.
+    // Perform updates.
     await Promise.all([
         updateUserProfile(uid, firestoreUpdates),
         Object.keys(authUpdates).length > 0 ? updateFirebaseProfile(auth.currentUser, authUpdates) : Promise.resolve(),
     ]);
 
-    // 4. If upload was successful and there was an old picture, delete it.
-    if (newPhoto.downloadURL && userProfile?.photoPath) {
-        await deleteOldProfilePicture(userProfile.photoPath);
-    }
-
-    // 5. Update local state.
+    // Update local state.
     setUser(prevUser => prevUser ? { ...prevUser, ...firestoreUpdates, ...authUpdates } : null);
 
   }, []);

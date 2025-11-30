@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -16,9 +16,7 @@ export default function ProfilePage() {
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isSaving, setIsSaving] = useState(false);
 
@@ -30,22 +28,6 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -55,13 +37,12 @@ export default function ProfilePage() {
       await updateUser({
           displayName: name,
           phone,
-      }, avatarFile);
+      });
 
       toast({
         title: 'Profil Diperbarui',
         description: 'Informasi profil Anda telah berhasil disimpan.',
       });
-      setAvatarFile(null); // Reset file input after successful upload
     } catch (error) {
         console.error("Profile update error:", error);
         toast({
@@ -92,29 +73,17 @@ export default function ProfilePage() {
         <form onSubmit={handleSubmit}>
           <CardHeader>
             <CardTitle>Informasi Profil</CardTitle>
-            <CardDescription>Perbarui foto dan detail pribadi Anda di sini.</CardDescription>
+            <CardDescription>Perbarui detail pribadi Anda di sini.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center gap-6">
-              <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
+              <Avatar className="h-24 w-24">
                 <AvatarImage src={avatarPreview || undefined} alt="User Avatar" />
                 <AvatarFallback>
                     <UserIcon className="h-12 w-12" />
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col gap-2">
-                <Button type="button" onClick={handleAvatarClick} disabled={isSaving}>
-                  Unggah Foto
-                </Button>
-                <p className="text-xs text-muted-foreground">PNG, JPG, GIF hingga 1MB.</p>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept="image/png, image/jpeg, image/gif"
-                />
-              </div>
+               <p className="text-sm text-muted-foreground">Foto profil disinkronkan dari akun Google Anda jika login menggunakan Google.</p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
