@@ -1,13 +1,15 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import type { Transaction, Budget, Bill, Note } from '@/lib/types';
+import type { Transaction, Budget, Bill, Note, Document } from '@/lib/types';
 import { useAuth } from './auth-context';
-import { db } from '@/firebase/config';
+import { db, storage } from '@/firebase/config';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp, query, orderBy, FirestoreError } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { formatISO } from 'date-fns';
 import { errorEmitter } from '@/lib/events';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { v4 as uuidv4 } from 'uuid';
 
 
 interface DataContextType {
@@ -15,6 +17,7 @@ interface DataContextType {
   budgets: Budget[];
   bills: Bill[];
   notes: Note[];
+  documents: Document[];
   loading: boolean;
   addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
   addBudget: (budget: Omit<Budget, 'id'>) => Promise<void>;
@@ -29,6 +32,8 @@ interface DataContextType {
   addNote: (note: Omit<Note, 'id' | 'createdAt'>) => Promise<void>;
   updateNote: (id: string, updates: Partial<Omit<Note, 'id' | 'createdAt'>>) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
+  uploadDocument: (file: File, onProgress: (progress: number) => void) => Promise<void>;
+  deleteDocument: (id: string, path: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -40,6 +45,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Firestore listeners
@@ -83,12 +89,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setNotes(n);
       }, createErrorHandler('notes'));
 
+      const documentsQuery = query(collection(db, `users/${user.uid}/documents`), orderBy('createdAt', 'desc'));
+      const unsubDocuments = onSnapshot(documentsQuery, (snapshot) => {
+        const d: Document[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate().toISOString() } as Document));
+        setDocuments(d);
+      }, createErrorHandler('documents'));
+
 
       return () => {
         unsubTransactions();
         unsubBudgets();
         unsubBills();
         unsubNotes();
+        unsubDocuments();
       };
     } else if (!authLoading) {
       // User is logged out, clear data
@@ -96,6 +109,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setBudgets([]);
       setBills([]);
       setNotes([]);
+      setDocuments([]);
       setLoading(false);
     }
   }, [user, authLoading]);
@@ -258,9 +272,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
               createdAt: serverTimestamp()
           });
       }
-      // Note: We don't handle un-paying a bill by deleting the transaction automatically.
-      // This could be complex and lead to confusing user experience.
-
+      
       batch.commit().catch(error => {
            if (error instanceof FirestoreError && error.code === 'permission-denied') {
               // This is a complex error to model. We'll emit a generic one for the batch.
@@ -329,11 +341,86 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
   }, [user]);
 
+  const uploadDocument = useCallback(async (file: File, onProgress: (progress: number) => void) => {
+    if (!user) throw new Error("User not authenticated");
+    
+    const fileId = uuidv4();
+    const filePath = `users/${user.uid}/documents/${fileId}-${file.name}`;
+    const storageRef = ref(storage, filePath);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    return new Promise<void>((resolve, reject) => {
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                onProgress(progress);
+            },
+            (error) => {
+                console.error("Upload failed:", error);
+                reject(error);
+            },
+            async () => {
+                try {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    const docCollectionRef = collection(db, `users/${user.uid}/documents`);
+                    const payload = {
+                        name: file.name,
+                        url: downloadURL,
+                        path: filePath,
+                        size: file.size,
+                        contentType: file.type,
+                        createdAt: serverTimestamp(),
+                    };
+                    await addDoc(docCollectionRef, payload);
+                    resolve();
+                } catch(error) {
+                     if (error instanceof FirestoreError && error.code === 'permission-denied') {
+                        errorEmitter.emit('permission-error', new FirestorePermissionError({
+                            operation: 'create',
+                            path: `users/${user.uid}/documents/<new_id>`,
+                            requestResourceData: { name: file.name, size: file.size },
+                        }));
+                    } else {
+                        console.error("Error saving document metadata:", error);
+                    }
+                    reject(error);
+                }
+            }
+        );
+    });
+  }, [user]);
+
+
+  const deleteDocument = useCallback(async (id: string, path: string) => {
+    if (!user) throw new Error("User not authenticated");
+
+    const docRef = doc(db, `users/${user.uid}/documents`, id);
+    const storageRef = ref(storage, path);
+
+    try {
+        // First, delete the file from Storage
+        await deleteObject(storageRef);
+        // Then, delete the metadata from Firestore
+        await deleteDoc(docRef);
+    } catch (error) {
+         if (error instanceof FirestoreError && error.code === 'permission-denied') {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                operation: 'delete',
+                path: docRef.path,
+            }));
+        } else {
+            console.error("Error deleting document:", error);
+        }
+    }
+  }, [user]);
+
+
   const value = {
     transactions,
     budgets,
     bills,
     notes,
+    documents,
     loading: authLoading || loading,
     addTransaction,
     addBudget,
@@ -347,7 +434,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     refreshBills,
     addNote,
     updateNote,
-    deleteNote
+    deleteNote,
+    uploadDocument,
+    deleteDocument,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

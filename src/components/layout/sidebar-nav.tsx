@@ -10,6 +10,7 @@ import {
   Bell,
   User,
   Notebook,
+  FileText,
 } from 'lucide-react';
 
 import {
@@ -28,6 +29,7 @@ const links = [
   { href: '/dashboard/bills', label: 'Tagihan', icon: Bell },
   { href: '/dashboard/reports', label: 'Laporan', icon: PieChart },
   { href: '/dashboard/notes', label: 'Catatan', icon: Notebook },
+  { href: '/dashboard/documents', label: 'Dokumen', icon: FileText },
   { href: '/dashboard/profile', label: 'Profil', icon: User },
 ];
 

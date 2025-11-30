@@ -34,3 +34,13 @@ export type Note = {
     content: string;
     createdAt: string; // ISO 8601 format
 };
+
+export type Document = {
+    id: string;
+    name: string;
+    url: string;
+    path: string;
+    size: number;
+    contentType: string;
+    createdAt: string; // ISO 8601 format
+};
