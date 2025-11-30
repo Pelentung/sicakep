@@ -32,7 +32,7 @@ interface DataContextType {
   addNote: (note: Omit<Note, 'id' | 'createdAt'>) => Promise<void>;
   updateNote: (id: string, updates: Partial<Omit<Note, 'id' | 'createdAt'>>) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
-  uploadDocument: (file: File, onProgress: (progress: number) => void) => Promise<void>;
+  uploadDocument: (file: File, name: string, onProgress: (progress: number) => void) => Promise<void>;
   deleteDocument: (id: string, path: string) => Promise<void>;
 }
 
@@ -341,11 +341,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       });
   }, [user]);
 
-  const uploadDocument = useCallback(async (file: File, onProgress: (progress: number) => void) => {
+  const uploadDocument = useCallback(async (file: File, name: string, onProgress: (progress: number) => void) => {
     if (!user) throw new Error("User not authenticated");
     
     const fileId = uuidv4();
-    const filePath = `users/${user.uid}/documents/${fileId}-${file.name}`;
+    const filePath = `users/${user.uid}/documents/${fileId}-${name}`;
     const storageRef = ref(storage, filePath);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -364,7 +364,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                     const docCollectionRef = collection(db, `users/${user.uid}/documents`);
                     const payload = {
-                        name: file.name,
+                        name: name,
                         url: downloadURL,
                         path: filePath,
                         size: file.size,
@@ -378,7 +378,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
                         errorEmitter.emit('permission-error', new FirestorePermissionError({
                             operation: 'create',
                             path: `users/${user.uid}/documents/<new_id>`,
-                            requestResourceData: { name: file.name, size: file.size },
+                            requestResourceData: { name: name, size: file.size },
                         }));
                     } else {
                         console.error("Error saving document metadata:", error);

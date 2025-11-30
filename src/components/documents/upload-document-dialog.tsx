@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,26 +19,44 @@ import { Progress } from '../ui/progress';
 
 interface UploadDocumentDialogProps {
   children: React.ReactNode;
-  onDocumentUploaded: (file: File, onProgress: (progress: number) => void) => Promise<void>;
+  onDocumentUploaded: (file: File, name: string, onProgress: (progress: number) => void) => Promise<void>;
 }
 
 export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDocumentDialogProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [docName, setDocName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  
+  useEffect(() => {
+    if (file) {
+      // Pre-fill name input without extension
+      setDocName(file.name.replace(/\.[^/.]+$/, ""));
+    } else {
+      setDocName('');
+    }
+  }, [file]);
+
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-        // Limit file size to 10MB
-        if (selectedFile.size > 10 * 1024 * 1024) {
+        if (selectedFile.type !== 'application/pdf') {
+             toast({
+                variant: 'destructive',
+                title: 'Jenis file tidak valid',
+                description: 'Hanya file PDF yang diizinkan.',
+            });
+            return;
+        }
+        if (selectedFile.size > 500 * 1024) {
             toast({
                 variant: 'destructive',
                 title: 'File terlalu besar',
-                description: 'Ukuran file maksimal adalah 10MB.',
+                description: 'Ukuran file maksimal adalah 500KB.',
             });
             return;
         }
@@ -56,11 +74,19 @@ export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDoc
     e.stopPropagation();
     const droppedFile = e.dataTransfer.files?.[0];
      if (droppedFile) {
-        if (droppedFile.size > 10 * 1024 * 1024) {
+        if (droppedFile.type !== 'application/pdf') {
+             toast({
+                variant: 'destructive',
+                title: 'Jenis file tidak valid',
+                description: 'Hanya file PDF yang diizinkan.',
+            });
+            return;
+        }
+        if (droppedFile.size > 500 * 1024) {
             toast({
                 variant: 'destructive',
                 title: 'File terlalu besar',
-                description: 'Ukuran file maksimal adalah 10MB.',
+                description: 'Ukuran file maksimal adalah 500KB.',
             });
             return;
         }
@@ -70,6 +96,7 @@ export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDoc
 
   const resetState = () => {
     setFile(null);
+    setDocName('');
     setIsUploading(false);
     setUploadProgress(0);
     if(fileInputRef.current) {
@@ -78,7 +105,7 @@ export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDoc
   };
 
   const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
+    if (!isOpen && !isUploading) {
         resetState();
     }
     setOpen(isOpen);
@@ -93,10 +120,19 @@ export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDoc
       });
       return;
     }
+     if (!docName.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Nama dokumen kosong',
+        description: 'Silakan beri nama untuk dokumen Anda.',
+      });
+      return;
+    }
 
     setIsUploading(true);
     try {
-      await onDocumentUploaded(file, setUploadProgress);
+      const finalName = docName.trim() + '.pdf';
+      await onDocumentUploaded(file, finalName, setUploadProgress);
       toast({
         title: 'Sukses',
         description: 'Dokumen Anda telah berhasil diunggah.',
@@ -123,7 +159,7 @@ export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDoc
         <DialogHeader>
           <DialogTitle>Unggah Dokumen</DialogTitle>
           <DialogDescription>
-            Pilih atau seret file untuk diunggah. Ukuran file maksimal 10MB.
+            Pilih file PDF untuk diunggah. Ukuran file maksimal 500KB.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -143,17 +179,30 @@ export function UploadDocumentDialog({ children, onDocumentUploaded }: UploadDoc
                         className="hidden"
                         onChange={handleFileSelect}
                         disabled={isUploading}
+                        accept="application/pdf"
                     />
                 </div>
             ) : (
-                <div className="p-4 border rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                        <FileIcon className="h-6 w-6 text-primary flex-shrink-0" />
-                        <span className="text-sm font-medium truncate">{file.name}</span>
+                <div className="space-y-4">
+                    <div className="p-4 border rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <FileIcon className="h-6 w-6 text-primary flex-shrink-0" />
+                            <span className="text-sm font-medium truncate">{file.name}</span>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => setFile(null)} disabled={isUploading}>
+                            <X className="h-4 w-4" />
+                        </Button>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setFile(null)} disabled={isUploading}>
-                        <X className="h-4 w-4" />
-                    </Button>
+                     <div className="space-y-2">
+                        <Label htmlFor="docName">Nama Dokumen (tanpa .pdf)</Label>
+                        <Input
+                            id="docName"
+                            value={docName}
+                            onChange={(e) => setDocName(e.target.value)}
+                            placeholder="Nama file baru Anda"
+                            disabled={isUploading}
+                        />
+                    </div>
                 </div>
             )}
             {isUploading && (
