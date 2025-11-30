@@ -28,14 +28,18 @@ export default function WelcomePage() {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   
-  const loading = authLoading;
+  const [isClient, setIsClient] = useState(false);
 
-  // Redirect if user is already logged in
   useEffect(() => {
-    if (user && !loading) {
+    setIsClient(true);
+  }, []);
+
+  // Redirect if user is already logged in, runs only on client
+  useEffect(() => {
+    if (user && !authLoading && isClient) {
       router.replace('/dashboard');
     }
-  }, [user, loading, router]);
+  }, [user, authLoading, router, isClient]);
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -83,8 +87,8 @@ export default function WelcomePage() {
     }
   };
 
-  // Show a loading spinner while checking auth state, and before redirecting.
-  if (loading && !user) {
+  // Show a loading spinner while checking auth state on the client, or if user is logged in and about to be redirected.
+  if (!isClient || (authLoading && !user) || (user && !authLoading)) {
      return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
             <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
@@ -122,7 +126,7 @@ export default function WelcomePage() {
                     required 
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    disabled={loading}
+                    disabled={authLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -133,11 +137,11 @@ export default function WelcomePage() {
                     required 
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    disabled={loading}
+                    disabled={authLoading}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? <LoaderCircle className="animate-spin" /> : "Masuk"}
+                <Button type="submit" className="w-full" disabled={authLoading}>
+                    {authLoading ? <LoaderCircle className="animate-spin" /> : "Masuk"}
                 </Button>
               </CardContent>
             </form>
@@ -161,7 +165,7 @@ export default function WelcomePage() {
                     required 
                     value={registerName}
                     onChange={(e) => setRegisterName(e.target.value)}
-                    disabled={loading}
+                    disabled={authLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -173,7 +177,7 @@ export default function WelcomePage() {
                     required 
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
-                    disabled={loading}
+                    disabled={authLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -184,11 +188,11 @@ export default function WelcomePage() {
                     required 
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
-                    disabled={loading}
+                    disabled={authLoading}
                   />
                 </div>
-                 <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? <LoaderCircle className="animate-spin" /> : "Daftar"}
+                 <Button type="submit" className="w-full" disabled={authLoading}>
+                    {authLoading ? <LoaderCircle className="animate-spin" /> : "Daftar"}
                 </Button>
               </CardContent>
             </form>
